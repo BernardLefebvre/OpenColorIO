@@ -12,9 +12,11 @@ matrix:
     - os: osx
       language: cpp
       compiler: clang
+      osx_image: xcode9.2
     - os: osx
       language: cpp
       compiler: gcc
+      osx_image: xcode9.3
     - os: osx
       language: cpp
       compiler: clang
