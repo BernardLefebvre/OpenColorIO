@@ -37,9 +37,7 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       brew update;
       brew install glew;
-      brew search python;
-      brew install python;
-      brew search python;
+      brew outdated python || brew upgrade python;
     fi
 
 # Run the Build script
