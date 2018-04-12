@@ -23,8 +23,11 @@ before_install:
       brew update;
       brew install glew;
       python -V;
-      pip install markupsafe;
-      pip3 install markupsafe;
+      brew install pyenv;
+      echo 'eval "$(pyenv init -)"' >> .bashrc;
+      source .bashrc;
+      pyenv install 3.5.2;
+      pyenv global 3.5.2;
     fi
 
 # Run the Build script
