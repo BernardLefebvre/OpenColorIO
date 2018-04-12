@@ -37,9 +37,8 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       brew update;
       brew install glew;
-      brew link openssl --force;
-      brew install python --with-brewed-openssl;
-      sudo ln -s /usr/local/Cellar/python/2.7.10/bin/python /usr/local/bin/python;
+      brew info python;
+      python -V;
     fi
 
 # Run the Build script
