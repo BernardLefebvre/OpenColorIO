@@ -3,15 +3,13 @@
 
 matrix:
   include:
-    - os: linux
-      language: cpp
-      compiler: clang
-    - os: linux
-      language: cpp
-      compiler: gcc
     - os: osx
       language: cpp
       compiler: clang
+      osx_image: xcode9.1
+    - os: osx
+      language: cpp
+      compiler: gcc
       osx_image: xcode9.2
     - os: osx
       language: cpp
@@ -20,7 +18,7 @@ matrix:
     - os: osx
       language: cpp
       compiler: clang
-      osx_image: xcode9.1
+      osx_image: xcode9.3
 
 env:
   - OPTIONS="-DCMAKE_BUILD_TYPE=Release -DOCIO_BUILD_TESTS=yes -DOCIO_BUILD_DOCS=yes"
@@ -39,6 +37,9 @@ before_install:
       brew install glew;
       brew info python;
       python -V;
+      brew link openssl --force;
+      brew install python --with-brewed-openssl;
+      sudo ln -s /usr/local/Cellar/python/2.7.14/bin/python /usr/local/bin/python;
     fi
 
 # Run the Build script
