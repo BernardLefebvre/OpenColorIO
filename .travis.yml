@@ -37,9 +37,10 @@ before_install:
       brew install glew;
       brew info python;
       python -V;
-      brew link openssl --force;
-      brew install python --with-brewed-openssl;
-      sudo ln -s /usr/local/Cellar/python/2.7.14/bin/python /usr/local/bin/python;
+      brew upgrade python;
+      python -V;
+      brew unlink python && brew link python;
+      python -V;
     fi
 
 # Run the Build script
