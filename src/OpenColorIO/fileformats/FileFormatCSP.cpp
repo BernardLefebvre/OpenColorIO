@@ -38,12 +38,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenColorIO/OpenColorIO.h>
 
-#include "transforms/FileTransform.h"
+#include "MathUtils.h"
 #include "ops/Lut1D/Lut1DOp.h"
 #include "ops/Lut3D/Lut3DOp.h"
-#include "MathUtils.h"
 #include "ParseUtils.h"
 #include "pystring/pystring.h"
+#include "transforms/FileTransform.h"
 
 OCIO_NAMESPACE_ENTER
 {
@@ -316,18 +316,19 @@ OCIO_NAMESPACE_ENTER
                 csptype("unknown"),
                 metadata("none")
             {
-                prelut = Lut1DOpData::Create();
-                lut1D = Lut1DOpData::Create();
-                lut3D = Lut3DOpData::Create();
+                prelut = Lut1D::Create();
+                lut1D = Lut1D::Create();
+                lut3D = Lut3D::Create();
             };
             ~CachedFileCSP() {};
             
             bool hasprelut;
             std::string csptype;
             std::string metadata;
-            Lut1DOpDataRcPtr prelut;
-            Lut1DOpDataRcPtr lut1D;
-            Lut3DOpDataRcPtr lut3D;
+            // TODO: Switch to the OpData classes.
+            Lut1DRcPtr prelut;
+            Lut1DRcPtr lut1D;
+            Lut3DRcPtr lut3D;
         };
         typedef OCIO_SHARED_PTR<CachedFileCSP> CachedFileCSPRcPtr;
         
@@ -393,9 +394,10 @@ OCIO_NAMESPACE_ENTER
                 throw Exception ("file stream empty when trying to read csp LUT");
             }
             
-            Lut1DOpDataRcPtr prelut_ptr = Lut1DOpData::Create();
-            Lut1DOpDataRcPtr lut1d_ptr = Lut1DOpData::Create();
-            Lut3DOpDataRcPtr lut3d_ptr = Lut3DOpData::Create();
+            // TODO: Switch to the OpData classes.
+            Lut1DRcPtr prelut_ptr = Lut1D::Create();
+            Lut1DRcPtr lut1d_ptr = Lut1D::Create();
+            Lut3DRcPtr lut3d_ptr = Lut3D::Create();
 
             // try and read the LUT header
             std::string line;
@@ -626,7 +628,7 @@ OCIO_NAMESPACE_ENTER
                 }
                 
                 prelut_ptr->maxerror = 1e-6f;
-                prelut_ptr->errortype = Lut1DOpData::ERROR_RELATIVE;
+                prelut_ptr->errortype = Lut1D::ERROR_RELATIVE;
                 
                 cachedFile->prelut = prelut_ptr;
             }
@@ -634,7 +636,7 @@ OCIO_NAMESPACE_ENTER
             if(csptype == "1D")
             {
                 lut1d_ptr->maxerror = 0.0f;
-                lut1d_ptr->errortype = Lut1DOpData::ERROR_RELATIVE;
+                lut1d_ptr->errortype = Lut1D::ERROR_RELATIVE;
                 cachedFile->lut1D = lut1d_ptr;
             }
             else if (csptype == "3D")

@@ -618,17 +618,17 @@ MatrixOpDataRcPtr RangeOpData::convertToMatrix() const
     // Create an identity matrix
     MatrixOpDataRcPtr mtx(new MatrixOpData(getInputBitDepth(), getOutputBitDepth()));
 
-    const float scale = (float)getScale();
-    mtx->m_m44[ 0] = scale;
-    mtx->m_m44[ 5] = scale;
-    mtx->m_m44[10] = scale;
-    mtx->m_m44[15] = 1.f;
+    const double scale = getScale();
+    mtx->setArrayValue(0, scale);
+    mtx->setArrayValue(5, scale);
+    mtx->setArrayValue(10, scale);
+    mtx->setArrayValue(15, 1.);
 
-    const float offset = (float)getOffset();
-    mtx->m_offset4[0] = offset;
-    mtx->m_offset4[1] = offset;
-    mtx->m_offset4[2] = offset;
-    mtx->m_offset4[3] = 0.f;
+    const double offset = getOffset();
+    mtx->setOffsetValue(0, offset);
+    mtx->setOffsetValue(1, offset);
+    mtx->setOffsetValue(2, offset);
+    mtx->setOffsetValue(3, 0.);
 
     mtx->validate();
 
@@ -668,7 +668,7 @@ bool RangeOpData::operator==(const OpData & other) const
     return true;
 }
 
-bool RangeOpData::isInverse(const RangeOpDataRcPtr & r) const
+bool RangeOpData::isInverse(ConstRangeOpDataRcPtr & r) const
 {
     return *r == *inverse();
 }
@@ -679,12 +679,12 @@ RangeOpDataRcPtr RangeOpData::inverse() const
     // The min/max "include" the scale factor, but since in/out scale are also
     // swapped, no need to rescale the min/max.
 
-    RangeOpDataRcPtr invOp( new RangeOpData(getOutputBitDepth(),
-                                            getInputBitDepth(),
-                                            getMinOutValue(),
-                                            getMaxOutValue(),
-                                            getMinInValue(),
-                                            getMaxInValue()) );
+    RangeOpDataRcPtr invOp = std::make_shared<RangeOpData>(getOutputBitDepth(),
+                                                           getInputBitDepth(),
+                                                           getMinOutValue(),
+                                                           getMaxOutValue(),
+                                                           getMinInValue(),
+                                                           getMaxInValue());
     invOp->validate();
 
     return invOp;

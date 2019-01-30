@@ -274,7 +274,7 @@ void BuildRangeOps(OpRcPtrVec & ops,
                             transform.getMinOutValue(), transform.getMaxOutValue());
         MatrixOpDataRcPtr m = r.convertToMatrix();
 
-        CreateMatrixOffsetOp(ops, m->m_m44, m->m_offset4, combinedDir);
+        CreateMatrixOp(ops, m, combinedDir);
     }
 }
     
@@ -394,10 +394,11 @@ OIIO_ADD_TEST(RangeTransform, no_clamp_converts_to_matrix)
         BuildRangeOps(ops, *config, *range, OCIO::TRANSFORM_DIR_FORWARD) );
 
     OIIO_REQUIRE_EQUAL(ops.size(), 1);
-    OIIO_CHECK_EQUAL(ops[0]->const_data()->getType(), OCIO::OpData::RangeType);
+    OCIO::ConstOpRcPtr op0 = ops[0];
+    OIIO_REQUIRE_EQUAL(op0->data()->getType(), OCIO::OpData::RangeType);
 
-    OCIO::RangeOpDataRcPtr rangeData
-        = DynamicPtrCast<OCIO::RangeOpData>(ops[0]->const_data());
+    OCIO::ConstRangeOpDataRcPtr rangeData
+        = DynamicPtrCast<const OCIO::RangeOpData>(op0->data());
 
     OIIO_CHECK_EQUAL(rangeData->getMinInValue(), range->getMinInValue());
     OIIO_CHECK_EQUAL(rangeData->getMaxInValue(), range->getMaxInValue());
@@ -412,26 +413,27 @@ OIIO_ADD_TEST(RangeTransform, no_clamp_converts_to_matrix)
         BuildRangeOps(ops, *config, *range, OCIO::TRANSFORM_DIR_FORWARD) );
 
     OIIO_REQUIRE_EQUAL(ops.size(), 2);
-    OIIO_REQUIRE_EQUAL(ops[1]->const_data()->getType(), OCIO::OpData::MatrixType);
+    OCIO::ConstOpRcPtr op1 = ops[1];
+    OIIO_REQUIRE_EQUAL(op1->data()->getType(), OCIO::OpData::MatrixType);
 
-    OCIO::MatrixOpDataRcPtr matrixData
-        = DynamicPtrCast<OCIO::MatrixOpData>(ops[1]->const_data());
+    OCIO::ConstMatrixOpDataRcPtr matrixData
+        = DynamicPtrCast<const OCIO::MatrixOpData>(op1->data());
 
-    OIIO_CHECK_EQUAL(matrixData->m_offset4[0], rangeData->getOffset());
+    OIIO_CHECK_EQUAL(matrixData->getOffsetValue(0), rangeData->getOffset());
 
-    OIIO_CHECK_EQUAL(matrixData->m_offset4[0], 0.5f);
-    OIIO_CHECK_EQUAL(matrixData->m_offset4[1], 0.5f);
-    OIIO_CHECK_EQUAL(matrixData->m_offset4[2], 0.5f);
-    OIIO_CHECK_EQUAL(matrixData->m_offset4[3], 0.0f);
+    OIIO_CHECK_EQUAL(matrixData->getOffsetValue(0), 0.5);
+    OIIO_CHECK_EQUAL(matrixData->getOffsetValue(1), 0.5);
+    OIIO_CHECK_EQUAL(matrixData->getOffsetValue(2), 0.5);
+    OIIO_CHECK_EQUAL(matrixData->getOffsetValue(3), 0.0);
 
-    OIIO_CHECK_ASSERT(matrixData->isMatrixDiagonal());
+    OIIO_CHECK_ASSERT(matrixData->isDiagonal());
 
-    OIIO_CHECK_EQUAL(matrixData->m_m44[0], rangeData->getScale());
+    OIIO_CHECK_EQUAL(matrixData->getArray()[0], rangeData->getScale());
 
-    OIIO_CHECK_EQUAL(matrixData->m_m44[ 0], 2.0f);
-    OIIO_CHECK_EQUAL(matrixData->m_m44[ 5], 2.0f);
-    OIIO_CHECK_EQUAL(matrixData->m_m44[10], 2.0f);
-    OIIO_CHECK_EQUAL(matrixData->m_m44[15], 1.0f);
+    OIIO_CHECK_EQUAL(matrixData->getArray()[ 0], 2.0);
+    OIIO_CHECK_EQUAL(matrixData->getArray()[ 5], 2.0);
+    OIIO_CHECK_EQUAL(matrixData->getArray()[10], 2.0);
+    OIIO_CHECK_EQUAL(matrixData->getArray()[15], 1.0);
 }
 
 #endif

@@ -26,19 +26,19 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <OpenColorIO/OpenColorIO.h>
-
-#include "transforms/FileTransform.h"
-#include "ops/Lut1D/Lut1DOp.h"
-#include "ops/Lut3D/Lut3DOp.h"
-#include "MathUtils.h"
-#include "ParseUtils.h"
-#include "pystring/pystring.h"
-
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <sstream>
+
+#include <OpenColorIO/OpenColorIO.h>
+
+#include "MathUtils.h"
+#include "ops/Lut1D/Lut1DOp.h"
+#include "ops/Lut3D/Lut3DOp.h"
+#include "ParseUtils.h"
+#include "pystring/pystring.h"
+#include "transforms/FileTransform.h"
 
 // Discreet's Flame LUT Format
 // Use a loose interpretation of the format to allow other 3D LUTs that look
@@ -114,15 +114,16 @@ OCIO_NAMESPACE_ENTER
                 has1D(false),
                 has3D(false)
             {
-                lut1D = Lut1DOpData::Create();
-                lut3D = Lut3DOpData::Create();
+                lut1D = Lut1D::Create();
+                lut3D = Lut3D::Create();
             };
             ~LocalCachedFile() {};
             
             bool has1D;
             bool has3D;
-            Lut1DOpDataRcPtr lut1D;
-            Lut3DOpDataRcPtr lut3D;
+            // TODO: Switch to the OpData classes.
+            Lut1DRcPtr lut1D;
+            Lut3DRcPtr lut3D;
         };
         
         typedef OCIO_SHARED_PTR<LocalCachedFile> LocalCachedFileRcPtr;
@@ -396,7 +397,7 @@ OCIO_NAMESPACE_ENTER
                 
                 const int FORMAT3DL_SHAPER_CODEVALUE_TOLERANCE = 2;
                 cachedFile->lut1D->maxerror = FORMAT3DL_SHAPER_CODEVALUE_TOLERANCE*scale;
-                cachedFile->lut1D->errortype = Lut1DOpData::ERROR_ABSOLUTE;
+                cachedFile->lut1D->errortype = Lut1D::ERROR_ABSOLUTE;
             }
             
             
@@ -407,7 +408,7 @@ OCIO_NAMESPACE_ENTER
                 cachedFile->has3D = true;
                 
                 // lut3dmax has been stored while reading values
-                if(lut3dmax<FORMAT3DL_CODEVALUE_LOWEST_PLAUSIBLE_MAXINT)
+                if (lut3dmax<FORMAT3DL_CODEVALUE_LOWEST_PLAUSIBLE_MAXINT)
                 {
                     std::ostringstream os;
                     os << "Error parsing .3dl file.";
@@ -420,7 +421,7 @@ OCIO_NAMESPACE_ENTER
                 }
                 
                 int lut3dbitdepth = GetLikelyLutBitDepth(lut3dmax);
-                if(lut3dbitdepth<0)
+                if (lut3dbitdepth<0)
                 {
                     std::ostringstream os;
                     os << "Error parsing .3dl file.";
@@ -434,8 +435,8 @@ OCIO_NAMESPACE_ENTER
                 float scale = 1.0f / static_cast<float>(bitdepthmax);
                 
                 // Interpret the int array as a 3D LUT
-                int lutEdgeLen = Get3DLutEdgeLenFromNumPixels((int)raw3d.size()/3);
-                
+                int lutEdgeLen = Get3DLutEdgeLenFromNumPixels((int)raw3d.size() / 3);
+
                 // Reformat 3D data
                 cachedFile->lut3D->size[0] = lutEdgeLen;
                 cachedFile->lut3D->size[1] = lutEdgeLen;
@@ -802,7 +803,7 @@ OIIO_ADD_TEST(FileFormat3DL, TestLoad)
 
     OIIO_CHECK_ASSERT(lutFile->has1D);
     OIIO_CHECK_ASSERT(lutFile->has3D);
-    OIIO_CHECK_EQUAL(OCIO::Lut1DOpData::ERROR_ABSOLUTE, lutFile->lut1D->errortype);
+    OIIO_CHECK_EQUAL(OCIO::Lut1D::ERROR_ABSOLUTE, lutFile->lut1D->errortype);
     OIIO_CHECK_EQUAL(0.00195503421f, lutFile->lut1D->maxerror);
     OIIO_CHECK_EQUAL(0.0f, lutFile->lut1D->from_min[1]);
     OIIO_CHECK_EQUAL(1.0f, lutFile->lut1D->from_max[1]);

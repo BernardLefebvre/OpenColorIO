@@ -63,8 +63,8 @@ OCIO_NAMESPACE_ENTER
         // Gamma
         float mGammaRGB[4];
 
-        // 1D LUT
-        Lut1DOpDataRcPtr lut;
+        // TODO: Switch to the OpData class.
+        Lut1DRcPtr lut;
     };
 
     typedef OCIO_SHARED_PTR<LocalCachedFile> LocalCachedFileRcPtr;
@@ -350,7 +350,7 @@ OCIO_NAMESPACE_ENTER
                 // normalized by 65535 to interpret them as [0,1].
                 // The LUT will be inverted to convert output-linear values
                 // into values that may be sent to the display.
-                cachedFile->lut = Lut1DOpData::Create();
+                cachedFile->lut = Lut1D::Create();
                 cachedFile->lut->luts[0] = red->GetCurve();
                 cachedFile->lut->luts[1] = green->GetCurve();
                 cachedFile->lut->luts[2] = blue->GetCurve();
@@ -486,31 +486,6 @@ OCIO::LocalCachedFileRcPtr LoadICCFile(const std::string & fileName)
         fileName, std::ios_base::binary);
 }
 
-void BuildOps(const std::string & fileName,
-              OCIO::OpRcPtrVec & fileOps,
-              OCIO::TransformDirection dir)
-{
-    const std::string filePath(std::string(OCIO::getTestFilesDir()) + "/"
-                               + fileName);
-
-    // Create a FileTransform
-    OCIO::FileTransformRcPtr pFileTransform
-        = OCIO::FileTransform::Create();
-    // A transform file does not define any interpolation (contrary to config
-    // file), this is to avoid exception when creating the operation.
-    pFileTransform->setInterpolation(OCIO::INTERP_LINEAR);
-    pFileTransform->setDirection(OCIO::TRANSFORM_DIR_FORWARD);
-    pFileTransform->setSrc(filePath.c_str());
-
-    // Create empty Config to use
-    OCIO::ConfigRcPtr pConfig = OCIO::Config::Create();
-
-    OCIO::ContextRcPtr pContext = OCIO::Context::Create();
-
-    OCIO::BuildFileOps(fileOps, *(pConfig.get()), pContext,
-        *(pFileTransform.get()), dir);
-}
-
 OIIO_ADD_TEST(FileFormatICC, TestFile)
 {
     OCIO::LocalCachedFileRcPtr iccFile;
@@ -595,7 +570,7 @@ OIIO_ADD_TEST(FileFormatICC, TestFile)
         // Knowing the LUT has 1024 elements
         // and is inverted, verify values for a given index
         // are converted to index * step
-        const float error = 1e-6f;
+        const float error = 1e-5f;
         
         // value at index 200
         tmp[0] = 0.0317235067f;

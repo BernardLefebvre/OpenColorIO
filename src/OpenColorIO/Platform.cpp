@@ -59,8 +59,9 @@ void Getenv (const char* name, std::string& value)
     }
     else
     {
-        value.resize(len+1);
-        ::snprintf(&value[0], len, "%s", val);
+        // NB: len is the sizeof() of a string ( i.e. not its strlen() )
+        value = val;
+        value.resize(len-1);
         if(val) free(val);
     }
 #else
@@ -84,6 +85,27 @@ int Strncasecmp(const char * str1, const char * str2, size_t n)
     return ::_strnicmp(str1, str2, n);
 #else
     return ::strncasecmp(str1, str2, n);
+#endif
+}
+
+void* AlignedMalloc(size_t size, size_t alignment)
+{
+#ifdef WINDOWS
+    void* memBlock = _aligned_malloc(size, alignment);
+    return memBlock;
+#else
+    void* memBlock = 0x0;
+    if (!posix_memalign(&memBlock, alignment, size)) return memBlock;
+    return 0x0;
+#endif
+}
+
+void AlignedFree(void* memBlock)
+{
+#ifdef WINDOWS
+    _aligned_free(memBlock);
+#else
+    free(memBlock);
 #endif
 }
 
@@ -117,12 +139,33 @@ OIIO_ADD_TEST(Platform, getenv)
 
 OIIO_ADD_TEST(Platform, putenv)
 {
-    const std::string value("MY_DUMMY_ENV=SomeValue");
-    ::putenv(const_cast<char*>(value.c_str()));
-    std::string env;
-    OCIO::Platform::Getenv("MY_DUMMY_ENV", env);
-    OIIO_CHECK_ASSERT(!env.empty());
-    OIIO_CHECK_ASSERT(0==strcmp("SomeValue", env.c_str()));
+    {
+        const std::string value("MY_DUMMY_ENV=SomeValue");
+        ::putenv(const_cast<char*>(value.c_str()));
+        std::string env;
+        OCIO::Platform::Getenv("MY_DUMMY_ENV", env);
+        OIIO_CHECK_ASSERT(!env.empty());
+
+        OIIO_CHECK_ASSERT(0==strcmp("SomeValue", env.c_str()));
+        OIIO_CHECK_EQUAL(strlen("SomeValue"), env.size());
+    }
+    {
+        const std::string value("MY_DUMMY_ENV= ");
+        ::putenv(const_cast<char*>(value.c_str()));
+        std::string env;
+        OCIO::Platform::Getenv("MY_DUMMY_ENV", env);
+        OIIO_CHECK_ASSERT(!env.empty());
+
+        OIIO_CHECK_ASSERT(0==strcmp(" ", env.c_str()));
+        OIIO_CHECK_EQUAL(strlen(" "), env.size());
+    }
+    {
+        const std::string value("MY_DUMMY_ENV=");
+        ::putenv(const_cast<char*>(value.c_str()));
+        std::string env;
+        OCIO::Platform::Getenv("MY_DUMMY_ENV", env);
+        OIIO_CHECK_ASSERT(env.empty());
+    }
 }
 
 OIIO_ADD_TEST(Platform, string_compare)
@@ -139,4 +182,14 @@ OIIO_ADD_TEST(Platform, string_compare)
     OIIO_CHECK_NE(0, OCIO::Platform::Strcasecmp("TtOoPp", "TOoPp"));
 }
 
+OIIO_ADD_TEST(Platform, aligned_memory_test)
+{
+    size_t alignement = 16u;
+    void* memBlock = OCIO::Platform::AlignedMalloc(1001, alignement);
+
+    OIIO_CHECK_ASSERT(memBlock);
+    OIIO_CHECK_EQUAL(((uintptr_t)memBlock) % alignement, 0);
+
+    OCIO::Platform::AlignedFree(memBlock);
+}
 #endif // OCIO_UNIT_TEST
