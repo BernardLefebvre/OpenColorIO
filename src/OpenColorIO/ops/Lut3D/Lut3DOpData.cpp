@@ -66,11 +66,6 @@ Lut3DOpDataRcPtr MakeFastLut3DFromInverse(ConstLut3DOpDataRcPtr & lut)
     newDomain->setInputBitDepth(lut->getInputBitDepth());
     newDomain->setOutputBitDepth(lut->getInputBitDepth());
 
-    // The composition needs to use the INV_EXACT renderer.
-    // (Also avoids infinite loop.)
-    // So temporarily set the style to INV_EXACT.
-    Lut3DStyleGuard guard(lut);
-
     // Compose the LUT newDomain with our inverse LUT (using INV_EXACT style).
     Lut3DOpData::Compose(newDomain, lut);
 
@@ -571,28 +566,6 @@ Lut3DOpDataRcPtr Lut3DOpData::inverse() const
     invLut->OpData::setOutputBitDepth(in);
 
     return invLut;
-}
-
-namespace
-{
-const char* GetInvStyleName(Lut3DOpData::InvStyle invStyle)
-{
-    switch (invStyle)
-    {
-    case Lut3DOpData::INV_EXACT:
-    {
-        return "exact";
-        break;
-    }
-    case Lut3DOpData::INV_FAST:
-    {
-        return "fast";
-        break;
-    }
-    }
-
-    throw Exception("3D LUT has an invalid inverse style.");
-}
 }
 
 void Lut3DOpData::finalize()
