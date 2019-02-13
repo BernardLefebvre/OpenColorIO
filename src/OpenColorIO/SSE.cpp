@@ -695,6 +695,9 @@ OIIO_ADD_TEST(SSE, scalar_sin_cos_test)
     }
 }
 
+#pragma message ("SSE enabled")
+#else
+#pragma message ("SSE disabled")
 
 #endif
 #endif

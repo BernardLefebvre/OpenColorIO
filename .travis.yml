@@ -9,13 +9,11 @@ matrix:
     - os: linux
       language: cpp
       compiler: gcc
-      env:
-        - OPTIONS_MORE=" -DOCIO_USE_SSE=ON"
     - os: linux
       language: cpp
       compiler: gcc
       env:
-        - OPTIONS_MORE=" -DOCIO_USE_SSE=OFF"
+        - OPTIONS_NO_SSE="-DCMAKE_BUILD_TYPE=Release -DOCIO_BUILD_TESTS=ON -DOCIO_BUILD_GPU_TESTS=OFF -DOCIO_BUILD_DOCS=ON -DOCIO_WARNING_AS_ERROR=ON -DOCIO_USE_SSE=OFF"
     - os: osx
       language: cpp
       compiler: clang
