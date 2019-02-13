@@ -9,6 +9,13 @@ matrix:
     - os: linux
       language: cpp
       compiler: gcc
+      env:
+        - OPTIONS_MORE=" -DOCIO_USE_SSE=ON"
+    - os: linux
+      language: cpp
+      compiler: gcc
+      env:
+        - OPTIONS_MORE=" -DOCIO_USE_SSE=OFF"
     - os: osx
       language: cpp
       compiler: clang
@@ -54,7 +61,7 @@ before_install:
 script:
   - mkdir _build
   - cd _build
-  - cmake .. -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS
+  - cmake .. -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS $OPTIONS_MORE
   - cmake --build . --target install
   - ctest -V
 

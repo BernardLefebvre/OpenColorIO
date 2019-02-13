@@ -17,10 +17,6 @@ environment:
       CMAKE_PLATFORM: "Visual Studio 14 2015 Win64"
       OCIO_BUILD_LIB: OFF
       OCIO_USE_SSE: ON
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      CMAKE_PLATFORM: "Visual Studio 14 2015 Win64"
-      OCIO_BUILD_LIB: ON
-      OCIO_USE_SSE: OFF
 
 install:
   - cinst: python2
