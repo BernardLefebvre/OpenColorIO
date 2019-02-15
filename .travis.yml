@@ -13,7 +13,7 @@ matrix:
       language: cpp
       compiler: gcc
       env:
-        - OPTIONS_BUILD=" -DOCIO_USE_SSE=OFF"
+        - OPTIONS_BUILD="-DOCIO_USE_SSE=OFF"
     - os: osx
       language: cpp
       compiler: clang
