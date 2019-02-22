@@ -72,7 +72,7 @@ public:
 
     virtual ~LogOpData();
 
-    void validate() const;
+    void validate() const override;
 
     Type getType() const override { return LogType; }
 
@@ -86,7 +86,7 @@ public:
 
     void finalize() override;
 
-    bool operator==(const OpData& other) const;
+    bool operator==(const OpData& other) const override;
 
     LogOpDataRcPtr clone() const;
 

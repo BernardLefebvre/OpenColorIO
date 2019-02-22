@@ -43,7 +43,7 @@ namespace YAML {
     class InvalidScalar;
     class KeyNotFound;
     template <typename T> class TypedKeyNotFound;
-    template <> class TypedKeyNotFound<OCIO_NAMESPACE::CologetBarSpace>;
+    template <> class TypedKeyNotFound<OCIO_NAMESPACE::ColorSpace>;
     template <> class TypedKeyNotFound<OCIO_NAMESPACE::Config>;
     template <> class TypedKeyNotFound<OCIO_NAMESPACE::Exception>;
     template <> class TypedKeyNotFound<OCIO_NAMESPACE::GpuShaderDesc>;
