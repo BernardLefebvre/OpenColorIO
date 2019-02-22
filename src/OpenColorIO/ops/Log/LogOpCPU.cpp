@@ -479,9 +479,9 @@ void Lin2LogRenderer::apply(float * rgbaBuffer, long numPixels) const
         (float)m_paramsG[LIN_SIDE_OFFSET],
         (float)m_paramsB[LIN_SIDE_OFFSET] };
     const float klogoutscale[] = {
-        m_outScale * (float)m_paramsR[LOG_SIDE_SLOPE] / log2(m_base),
-        m_outScale * (float)m_paramsG[LOG_SIDE_SLOPE] / log2(m_base),
-        m_outScale * (float)m_paramsB[LOG_SIDE_SLOPE] / log2(m_base) };
+        (float)(m_outScale * m_paramsR[LOG_SIDE_SLOPE] / log2(m_base)),
+        (float)(m_outScale * m_paramsG[LOG_SIDE_SLOPE] / log2(m_base)),
+        (float)(m_outScale * m_paramsB[LOG_SIDE_SLOPE] / log2(m_base)) };
     const float kboutscale[] = {
         (float)m_paramsR[LOG_SIDE_OFFSET] * m_outScale,
         (float)m_paramsG[LOG_SIDE_OFFSET] * m_outScale,
