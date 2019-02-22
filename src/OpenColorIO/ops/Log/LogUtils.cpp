@@ -27,6 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <algorithm>
+#include <cmath>
 
 #include <OpenColorIO/OpenColorIO.h>
 
@@ -64,7 +65,7 @@ void ConvertFromCTFToOCIO(const CTFParams::Params & ctfParams,
 
     ocioParams[LOG_SIDE_SLOPE]    = 1. / mult_factor;
     ocioParams[LIN_SIDE_SLOPE]    = 1. / gain;
-    ocioParams[LIN_SIDE_OFFSET]    = (offset - shadow) / gain;
+    ocioParams[LIN_SIDE_OFFSET]   = (offset - shadow) / gain;
     ocioParams[LOG_SIDE_OFFSET]   = refWhite;
 }
 
@@ -87,7 +88,7 @@ void ValidateParams(const CTFParams::Params & ctfParams)
     if (!(gamma > 0.01f))
     {
         std::ostringstream oss;
-        oss << "CTF Log: Invalid gamma value '";
+        oss << "Log: Invalid gamma value '";
         oss << gamma;
         oss << "', gamma should be greater than 0.01.";
         throw Exception(oss.str().c_str());

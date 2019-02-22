@@ -307,11 +307,11 @@ OIIO_ADD_TEST(FinalizeOpVec, optimize_combine)
         1.0f, 1.0f, 1.0f, 1.0f };
     const float error = 1e-4f;
 
-    const double base = 10.0f;
-    const double logSlope[3] = { 0.18f, 0.18f, 0.18f };
-    const double linSlope[3] = { 2.0f, 2.0f, 2.0f };
-    const double linOffset[3] = { 0.1f, 0.1f, 0.1f };
-    const double logOffset[3] = { 1.0f, 1.0f, 1.0f };
+    const double base = 10.0;
+    const double logSlope[3] = { 0.18, 0.18, 0.18 };
+    const double linSlope[3] = { 2.0, 2.0, 2.0 };
+    const double linOffset[3] = { 0.1, 0.1, 0.1 };
+    const double logOffset[3] = { 1.0, 1.0, 1.0 };
 
     // Combining ops
     {
