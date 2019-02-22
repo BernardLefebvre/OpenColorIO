@@ -150,7 +150,8 @@ OCIO_NAMESPACE_ENTER
                 throw Exception("Only 32F bit depth is supported for the GPU shader");
             }
 
-            GetLogGPUShaderProgram(shaderDesc, logData());
+            ConstLogOpDataRcPtr data = logData();
+            GetLogGPUShaderProgram(shaderDesc, data);
         }
         
     }  // Anon namespace
