@@ -27,6 +27,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <cstring>
+
+#include <OpenColorIO/OpenColorIO.h>
+
 #ifndef WIN32
 
 // fwd declare yaml-cpp visibility
@@ -76,8 +79,6 @@ namespace YAML {
 #ifdef WIN32
 #pragma warning( pop )
 #endif
-
-#include <OpenColorIO/OpenColorIO.h>
 
 #include "Display.h"
 #include "Logging.h"
