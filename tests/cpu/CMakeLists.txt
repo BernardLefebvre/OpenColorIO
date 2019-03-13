@@ -1,8 +1,5 @@
 include(ExternalProject)
 
-# Define used for tests in src/OpenColorIO/Context.cpp
-add_definitions("-DOCIO_SOURCE_DIR=${CMAKE_SOURCE_DIR}")
-
 function(add_ocio_test NAME SOURCES PRIVATE_INCLUDES)
 	set(TEST_BINARY "test_${NAME}_exec")
 	set(TEST_NAME "test_${NAME}")
@@ -161,6 +158,7 @@ set(SOURCES
 	transforms/RangeTransform.cpp
 	transforms/TruelightTransform.cpp
 	UnitTest.cpp
+	UnitTestUtils.cpp
 )
 
 function(prepend var prefix)

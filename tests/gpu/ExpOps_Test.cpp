@@ -92,6 +92,7 @@ OCIO_ADD_GPU_TEST(ExponentOp, legacy_shader_v1)
         = OCIO::GpuShaderDesc::CreateLegacyShaderDesc(LUT3D_EDGE_SIZE);
 
     AddExponent(test, shaderDesc, OCIO::TRANSFORM_DIR_FORWARD, exp, 1e-5f, OCIO_VERSION_1);
+    test.setTestNaN(false);
 }
 
 
@@ -103,6 +104,7 @@ OCIO_ADD_GPU_TEST(ExponentOp, forward_v1)
         = OCIO::GpuShaderDesc::CreateShaderDesc();
 
     AddExponent(test, shaderDesc, OCIO::TRANSFORM_DIR_FORWARD, exp, 1e-5f, OCIO_VERSION_1);
+    test.setTestNaN(false);
 }
 
 OCIO_ADD_GPU_TEST(ExponentOp, forward)
@@ -130,6 +132,7 @@ OCIO_ADD_GPU_TEST(ExponentOp, inverse_legacy_shader_v1)
         = OCIO::GpuShaderDesc::CreateLegacyShaderDesc(LUT3D_EDGE_SIZE);
 
     AddExponent(test, shaderDesc, OCIO::TRANSFORM_DIR_INVERSE, exp, g_epsilon, OCIO_VERSION_1);
+    test.setTestNaN(false);
 }
 
 
@@ -141,6 +144,7 @@ OCIO_ADD_GPU_TEST(ExponentOp, inverse_v1)
         = OCIO::GpuShaderDesc::CreateShaderDesc();
 
     AddExponent(test, shaderDesc, OCIO::TRANSFORM_DIR_INVERSE, exp, g_epsilon, OCIO_VERSION_1);
+    test.setTestNaN(false);
 }
 
 
@@ -158,6 +162,7 @@ OCIO_ADD_GPU_TEST(ExponentOp, inverse)
         g_epsilon
 #endif
         , OCIO_VERSION_2);
+    test.setTestInfinity(false);
 }
 
 
@@ -177,6 +182,7 @@ OCIO_ADD_GPU_TEST(ExponentWithLinearOp, legacy_shader)
         5e-6f
 #endif
         );
+    test.setTestInfinity(false);
 }
 
 
@@ -192,6 +198,7 @@ OCIO_ADD_GPU_TEST(ExponentWithLinearOp, inverse_legacy_shader)
         5e-7f
 #endif
         );
+    test.setTestInfinity(false);
 }
 
 
@@ -207,6 +214,7 @@ OCIO_ADD_GPU_TEST(ExponentWithLinearOp, forward)
         5e-6f
 #endif
         );
+    test.setTestInfinity(false);
 }
 
 
@@ -222,6 +230,7 @@ OCIO_ADD_GPU_TEST(ExponentWithLinearOp, inverse)
         5e-7f
 #endif
         );
+    test.setTestInfinity(false);
 }
 
 
