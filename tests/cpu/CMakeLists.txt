@@ -1,5 +1,8 @@
 include(ExternalProject)
 
+# Define used for tests in src/OpenColorIO/Context.cpp
+add_definitions("-DOCIO_SOURCE_DIR=${CMAKE_SOURCE_DIR}")
+
 function(add_ocio_test NAME SOURCES PRIVATE_INCLUDES)
 	set(TEST_BINARY "test_${NAME}_exec")
 	set(TEST_NAME "test_${NAME}")
@@ -64,11 +67,15 @@ set(SOURCES
 	Exception.cpp
 	fileformats/cdl/CDLParser.cpp
 	fileformats/cdl/CDLReaderHelper.cpp
+	fileformats/ctf/CTFReaderHelper.cpp
+	fileformats/ctf/CTFReaderUtils.cpp
+	fileformats/ctf/CTFTransform.cpp
 	fileformats/FileFormat3DL.cpp
 	fileformats/FileFormatCCC.cpp
 	fileformats/FileFormatCC.cpp
 	fileformats/FileFormatCDL.cpp
 	fileformats/FileFormatCSP.cpp
+	fileformats/FileFormatCTF.cpp
 	fileformats/FileFormatDiscreet1DL.cpp
 	fileformats/FileFormatHDL.cpp
 	fileformats/FileFormatICC.cpp
@@ -82,6 +89,8 @@ set(SOURCES
 	fileformats/FileFormatSpiMtx.cpp
 	fileformats/FileFormatTruelight.cpp
 	fileformats/FileFormatVF.cpp
+	fileformats/xmlutils/XMLReaderHelper.cpp
+	fileformats/xmlutils/XMLReaderUtils.cpp
 	GpuShader.cpp
 	GpuShaderDesc.cpp
 	GpuShaderUtils.cpp
@@ -101,7 +110,20 @@ set(SOURCES
 	ops/CDL/CDLOpData.cpp
 	ops/CDL/CDLOps.cpp
 	ops/Exponent/ExponentOps.cpp
+	ops/FixedFunction/FixedFunctionOpGPU.cpp
+	ops/FixedFunction/FixedFunctionOpCPU.cpp
+	ops/FixedFunction/FixedFunctionOpData.cpp
+	ops/FixedFunction/FixedFunctionOps.cpp
+	ops/Gamma/GammaOpCPU.cpp
+	ops/Gamma/GammaOpData.cpp
+	ops/Gamma/GammaOpUtils.cpp
+	ops/Gamma/GammaOps.cpp
+	ops/IndexMapping.cpp
+	ops/Log/LogOpCPU.cpp
+	ops/Log/LogOpData.cpp
+	ops/Log/LogOpGPU.cpp
 	ops/Log/LogOps.cpp
+	ops/Log/LogUtils.cpp
 	ops/Lut1D/Lut1DOp.cpp
 	ops/Lut1D/Lut1DOpCPU.cpp
 	ops/Lut1D/Lut1DOpData.cpp
@@ -113,6 +135,7 @@ set(SOURCES
 	ops/Matrix/MatrixOpCPU.cpp
 	ops/Matrix/MatrixOpData.cpp
 	ops/Matrix/MatrixOps.cpp
+	ops/Metadata.cpp
 	ops/NoOp/NoOps.cpp
 	ops/Range/RangeOpCPU.cpp
 	ops/Range/RangeOpData.cpp
@@ -132,14 +155,18 @@ set(SOURCES
 	transforms/ColorSpaceTransform.cpp
 	transforms/DisplayTransform.cpp
 	transforms/ExponentTransform.cpp
+	transforms/ExponentWithLinearTransform.cpp
 	transforms/FileTransform.cpp
+	transforms/FixedFunctionTransform.cpp
 	transforms/GroupTransform.cpp
+	transforms/LogAffineTransform.cpp
 	transforms/LogTransform.cpp
 	transforms/LookTransform.cpp
 	transforms/MatrixTransform.cpp
 	transforms/RangeTransform.cpp
 	transforms/TruelightTransform.cpp
 	UnitTest.cpp
+	UnitTestUtils.cpp
 )
 
 function(prepend var prefix)

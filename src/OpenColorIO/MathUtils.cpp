@@ -358,52 +358,6 @@ bool GetMxbInverse(float* mout, float* vout,
     
     return true;
 }
- 
-// Reinterpret the binary representation of a single-precision floating-point number
-//   as a 32-bit integer.
-//
-// x : floating-point number
-//
-// Return reinterpreted float bit representation as an integer 
-inline unsigned floatAsInt(const float x)
-{
-    union {
-        float f;
-        unsigned i;
-    } v;
-
-    v.f = x;
-    return v.i;
-}
-
-// Reinterpret the binary representation of a 32-bit integer as a
-//   single-precision floating-point number.
-//
-// x : integer number
-//
-// Return reinterpreted integer bit representation as a float
-inline float intAsFloat(const unsigned x)
-{
-    union {
-        float f;
-        unsigned i;
-    } v;
-
-    v.i = x;
-    return v.f;
-}
-
-// Add a number of ULPs (Unit of Least Precision) to a given
-//   floating-point number.
-//
-// f : original floating-point number
-// ulp : the number of ULPs to be added to the floating-point number
-//
-// Return the original floating-point number added by the number of ULPs.
-inline float addULP(const float f, const int ulp)
-{
-    return intAsFloat( floatAsInt(f) + ulp );
-}
 
 //------------------------------------------------------------------------------
 //
@@ -626,6 +580,7 @@ OCIO_NAMESPACE_EXIT
 
 OCIO_NAMESPACE_USING
 
+#include <limits>
 #include "unittest.h"
 
 namespace
@@ -1511,5 +1466,17 @@ OIIO_ADD_TEST(MathUtils, halfs_differ_test)
     OIIO_CHECK_ASSERT(!HalfsDiffer(pos_2, pos_1, tol));
     OIIO_CHECK_ASSERT(!HalfsDiffer(neg_2, neg_1, tol));
 }
-#endif
 
+OIIO_ADD_TEST(MathUtils, clamp)
+{
+    OIIO_CHECK_EQUAL(-1.0f, Clamp(std::numeric_limits<float>::quiet_NaN(), -1.0f, 1.0f));
+
+    OIIO_CHECK_EQUAL(10.0f, Clamp( std::numeric_limits<float>::infinity(),  5.0f, 10.0f));
+    OIIO_CHECK_EQUAL(5.0f, Clamp(-std::numeric_limits<float>::infinity(),  5.0f, 10.0f));
+
+    OIIO_CHECK_EQUAL(0.0000005f, Clamp( 0.0000005f, 0.0f, 1.0f));
+    OIIO_CHECK_EQUAL(0.0f,       Clamp(-0.0000005f, 0.0f, 1.0f));
+    OIIO_CHECK_EQUAL(1.0f,       Clamp( 1.0000005f, 0.0f, 1.0f));
+}
+
+#endif

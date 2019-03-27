@@ -80,11 +80,22 @@ OCIO_NAMESPACE_ENTER
                           const ExponentTransform & transform,
                           TransformDirection dir);
     
+    void BuildExponentWithLinearOps(OpRcPtrVec & ops,
+                                    const Config& config,
+                                    const ExponentWithLinearTransform & transform,
+                                    TransformDirection dir);
+    
     void BuildFileOps(OpRcPtrVec & ops,
                       const Config& config,
                       const ConstContextRcPtr & context,
                       const FileTransform & transform,
                       TransformDirection dir);
+    
+    void BuildFixedFunctionOps(OpRcPtrVec & ops,
+                               const Config & config,
+                               const ConstContextRcPtr & context,
+                               const FixedFunctionTransform & transform,
+                               TransformDirection dir);
     
     void BuildGroupOps(OpRcPtrVec & ops,
                        const Config& config,
@@ -95,6 +106,11 @@ OCIO_NAMESPACE_ENTER
     void BuildLogOps(OpRcPtrVec & ops,
                      const Config& config,
                      const LogTransform& transform,
+                     TransformDirection dir);
+    
+    void BuildLogOps(OpRcPtrVec & ops,
+                     const Config& config,
+                     const LogAffineTransform& transform,
                      TransformDirection dir);
     
     void BuildLookOps(OpRcPtrVec & ops,

@@ -149,11 +149,23 @@ OCIO_NAMESPACE_ENTER
     //!cpp:type::
     typedef OCIO_SHARED_PTR<ExponentTransform> ExponentTransformRcPtr;
     
+    class OCIOEXPORT ExponentWithLinearTransform;
+    //!cpp:type::
+    typedef OCIO_SHARED_PTR<const ExponentWithLinearTransform> ConstExponentWithLinearTransformRcPtr;
+    //!cpp:type::
+    typedef OCIO_SHARED_PTR<ExponentWithLinearTransform> ExponentWithLinearTransformRcPtr;
+    
     class OCIOEXPORT FileTransform;
     //!cpp:type::
     typedef OCIO_SHARED_PTR<const FileTransform> ConstFileTransformRcPtr;
     //!cpp:type::
     typedef OCIO_SHARED_PTR<FileTransform> FileTransformRcPtr;
+    
+    class OCIOEXPORT FixedFunctionTransform;
+    //!cpp:type::
+    typedef OCIO_SHARED_PTR<const FixedFunctionTransform> ConstFixedFunctionTransformRcPtr;
+    //!cpp:type::
+    typedef OCIO_SHARED_PTR<FixedFunctionTransform> FixedFunctionTransformRcPtr;
     
     class OCIOEXPORT GroupTransform;
     //!cpp:type::
@@ -166,7 +178,13 @@ OCIO_NAMESPACE_ENTER
     typedef OCIO_SHARED_PTR<const LogTransform> ConstLogTransformRcPtr;
     //!cpp:type::
     typedef OCIO_SHARED_PTR<LogTransform> LogTransformRcPtr;
-    
+
+    class OCIOEXPORT LogAffineTransform;
+    //!cpp:type::
+    typedef OCIO_SHARED_PTR<const LogAffineTransform> ConstLogAffineTransformRcPtr;
+    //!cpp:type::
+    typedef OCIO_SHARED_PTR<LogAffineTransform> LogAffineTransformRcPtr;
+
     class OCIOEXPORT LookTransform;
     //!cpp:type::
     typedef OCIO_SHARED_PTR<const LookTransform> ConstLookTransformRcPtr;
@@ -246,11 +264,9 @@ OCIO_NAMESPACE_ENTER
     // 1D LUT INTERP_BEST: LINEAR
     // 3D LUT INTERP_BEST: TETRAHEDRAL
     //
-    // Note: INTERP_BEST is subject to change in minor releases, so if you
-    // care about locking off on a specific interpolation type, we'd recommend
-    // directly specifying it.
-    //
-    // Note: The tetrahedral method is always used when inverting 3D LUTs.
+    // Note: INTERP_BEST and INTERP_DEFAULT are subject to change in minor
+    // releases, so if you care about locking off on a specific interpolation
+    // type, we'd recommend directly specifying it.
     //
     enum Interpolation
     {
@@ -258,11 +274,34 @@ OCIO_NAMESPACE_ENTER
         INTERP_NEAREST = 1,     //! nearest neighbor in all dimensions
         INTERP_LINEAR = 2,      //! linear interpolation in all dimensions
         INTERP_TETRAHEDRAL = 3, //! tetrahedral interpolation in all directions
+        INTERP_CUBIC = 4,       //! cubic interpolation in all dimensions
 
         INTERP_DEFAULT = 254,   //! the default interpolation type
         INTERP_BEST = 255       //! the 'best' suitable interpolation type
     };
     
+    //!cpp:type::
+    //
+    // Specify the method to use when inverting a Lut1D or Lut3D.  The EXACT
+    // method is slower, and only available on the CPU, but it calculates an
+    // exact inverse.  The exact inverse is based on the use of LINEAR forward
+    // interpolation for Lut1D and TETRAHEDRAL forward interpolation for Lut3D.
+    // The FAST method bakes the inverse into another forward LUT (using the
+    // exact method).  For Lut1D, a half-domain LUT is used and so this is
+    // quite accurate even for scene-linear values, but for Lut3D the baked
+    // version is more of an approximation.  The DEFAULT is the FAST method
+    // since it is the only one available on both CPU and GPU.  The BEST is
+    // the EXACT method.
+    //
+    enum LutInversionQuality
+    {
+        LUT_INVERSION_EXACT = 0,
+        LUT_INVERSION_FAST,
+
+        LUT_INVERSION_DEFAULT = 254,
+        LUT_INVERSION_BEST = 255
+    };
+
     //!cpp:type::
     enum BitDepth {
         BIT_DEPTH_UNKNOWN = 0,
@@ -302,11 +341,22 @@ OCIO_NAMESPACE_ENTER
         ENV_ENVIRONMENT_LOAD_ALL
     };
 
-    //!cpp:type::
+    //!cpp:type:: A RangeTransform may be set to clamp the values, or not.
     enum RangeStyle
     {
         RANGE_NO_CLAMP = 0,
         RANGE_CLAMP
+    };
+    
+    //!cpp:type:: Enumeration of the :cpp:class:`FixedFunctionTransform` transform algorithms.
+    enum FixedFunctionStyle
+    {
+        FIXED_FUNCTION_ACES_RED_MOD_03 = 0, //! Red modifier (ACES 0.3/0.7)
+        FIXED_FUNCTION_ACES_RED_MOD_10,     //! Red modifier (ACES 1.0)
+        FIXED_FUNCTION_ACES_GLOW_03,        //! Glow function (ACES 0.3/0.7)
+        FIXED_FUNCTION_ACES_GLOW_10,        //! Glow function (ACES 1.0)
+        FIXED_FUNCTION_ACES_DARK_TO_DIM_10, //! Dark to dim surround correction (ACES 1.0)
+        FIXED_FUNCTION_REC2100_SURROUND     //! Rec.2100 surround correction (takes one double for the gamma param)
     };
     
     //!rst::
@@ -372,6 +422,11 @@ OCIO_NAMESPACE_ENTER
     extern OCIOEXPORT const char * RangeStyleToString(RangeStyle style);
     //!cpp:function::
     extern OCIOEXPORT RangeStyle RangeStyleFromString(const char * style);
+    
+    //!cpp:function::
+    extern OCIOEXPORT const char * FixedFunctionStyleToString(FixedFunctionStyle style);
+    //!cpp:function::
+    extern OCIOEXPORT FixedFunctionStyle FixedFunctionStyleFromString(const char * style);
     
     
     /*!rst::

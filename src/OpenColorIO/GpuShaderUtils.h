@@ -110,6 +110,7 @@ OCIO_NAMESPACE_ENTER
         std::string vec3fKeyword() const;
         // Get the string for creating constant vector with three elements
         std::string vec3fConst(float x, float y, float z) const;
+        std::string vec3fConst(double x, double y, double z) const;
         // Get the string for creating constant vector with three elements
         std::string vec3fConst(const std::string& x, const std::string& y,
                                const std::string& z) const;
@@ -123,6 +124,8 @@ OCIO_NAMESPACE_ENTER
         // Declare and initialize a vector with three elements
         void declareVec3f(const std::string& name,
                           float x, float y, float z);
+        void declareVec3f(const std::string& name,
+                          double x, double y, double z);
         // Declare and initialize a vector with three elements
         void declareVec3f(const std::string& name,
                           const std::string& x, const std::string& y, const std::string& z);
@@ -149,7 +152,8 @@ OCIO_NAMESPACE_ENTER
         // Declare and initialize a vector with four elements
         void declareVec4f(const std::string& name,
                           float x, float y, float z, float w);
-        // Declare and initialize a vector with four elements
+        void declareVec4f(const std::string& name,
+                          double x, double y, double z, double w);
         void declareVec4f(const std::string& name,
                           const std::string& x, const std::string& y,
                           const std::string& z, const std::string& w);

@@ -86,6 +86,16 @@ OCIO_NAMESPACE_ENTER
         {
             BuildExponentOps(ops, config, *exponentTransform, dir);
         }
+        else if(ConstExponentWithLinearTransformRcPtr expWithLinearTransform = \
+            DynamicPtrCast<const ExponentWithLinearTransform>(transform))
+        {
+            BuildExponentWithLinearOps(ops, config, *expWithLinearTransform, dir);
+        }
+        else if(ConstFixedFunctionTransformRcPtr fixedFunctionTransform = \
+            DynamicPtrCast<const FixedFunctionTransform>(transform))
+        {
+            BuildFixedFunctionOps(ops, config, context, *fixedFunctionTransform, dir);
+        }
         else if(ConstFileTransformRcPtr fileTransform = \
             DynamicPtrCast<const FileTransform>(transform))
         {
@@ -95,6 +105,11 @@ OCIO_NAMESPACE_ENTER
             DynamicPtrCast<const GroupTransform>(transform))
         {
             BuildGroupOps(ops, config, context, *groupTransform, dir);
+        }
+        else if(ConstLogAffineTransformRcPtr logAffineTransform = \
+            DynamicPtrCast<const LogAffineTransform>(transform))
+        {
+            BuildLogOps(ops, config, *logAffineTransform, dir);
         }
         else if(ConstLogTransformRcPtr logTransform = \
             DynamicPtrCast<const LogTransform>(transform))
@@ -164,6 +179,11 @@ OCIO_NAMESPACE_ENTER
             dynamic_cast<const FileTransform*>(t))
         {
             os << *fileTransform;
+        }
+        else if(const FixedFunctionTransform * fixedFunctionTransform = \
+            dynamic_cast<const FixedFunctionTransform*>(t))
+        {
+            os << *fixedFunctionTransform;
         }
         else if(const GroupTransform * groupTransform = \
             dynamic_cast<const GroupTransform*>(t))

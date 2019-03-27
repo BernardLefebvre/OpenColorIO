@@ -26,13 +26,18 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <cstring>
+#include <sstream>
+
 #include <OpenColorIO/OpenColorIO.h>
 
 #include "Op.h"
+#include "ops/CDL/CDLOps.h"
+#include "ops/Lut1D/Lut1DOp.h"
+#include "ops/Lut3D/Lut3DOp.h"
+#include "ops/Range/RangeOps.h"
 #include "pystring/pystring.h"
 
-#include <sstream>
-#include <cstring>
 
 OCIO_NAMESPACE_ENTER
 {
@@ -185,8 +190,83 @@ OCIO_NAMESPACE_ENTER
             ops[i]->finalize();
         }
     }
+
+    void CreateOpVecFromOpData(OpRcPtrVec & ops,
+                               const OpDataRcPtr & opData,
+                               TransformDirection dir)
+    {
+        switch (opData->getType())
+        {
+        case OpData::CDLType:
+        {
+            auto cdlSrc = std::dynamic_pointer_cast<CDLOpData>(opData);
+            auto cdl = std::make_shared<CDLOpData>(*cdlSrc);
+            CreateCDLOp(ops, cdl, dir);
+            break;
+        }
+
+        case OpData::OpData::Lut1DType:
+        {
+            auto lutSrc = std::dynamic_pointer_cast<Lut1DOpData>(opData);
+            auto lut = std::make_shared<Lut1DOpData>(*lutSrc);
+            CreateLut1DOp(ops, lut, dir);
+            break;
+        }
+
+        case OpData::OpData::Lut3DType:
+        {
+            auto lutSrc = std::dynamic_pointer_cast<Lut3DOpData>(opData);
+            auto lut = std::make_shared<Lut3DOpData>(*lutSrc);
+            CreateLut3DOp(ops, lut, dir);
+            break;
+        }
+
+        case OpData::MatrixType:
+        {
+            auto matrixSrc = std::dynamic_pointer_cast<MatrixOpData>(opData);
+            auto matrix = std::make_shared<MatrixOpData>(*matrixSrc);
+            CreateMatrixOp(ops, matrix, dir);
+            break;
+        }
+
+        case OpData::RangeType:
+        {
+            auto rangeSrc = std::dynamic_pointer_cast<RangeOpData>(opData);
+            auto range = std::make_shared<RangeOpData>(*rangeSrc);
+            CreateRangeOp(ops, range, dir);
+            break;
+        }
+
+        // TODO: Add the other ops when ready
+        default:
+            throw Exception("OpData is not supported");
+        }
+    }
+
+    void CreateOpVecFromOpDataVec(OpRcPtrVec & ops,
+                                  const OpDataVec & opDataVec,
+                                  TransformDirection dir)
+    {
+        if (dir == TRANSFORM_DIR_FORWARD)
+        {
+            for (auto & opData : opDataVec)
+            {
+                CreateOpVecFromOpData(ops, opData, dir);
+            }
+        }
+        else
+        {
+            for (int idx = (int)opDataVec.size() - 1; idx >= 0; --idx)
+            {
+                CreateOpVecFromOpData(ops, opDataVec[idx], dir);
+            }
+        }
+    }
+
 }
 OCIO_NAMESPACE_EXIT
+
+///////////////////////////////////////////////////////////////////////////////
 
 #ifdef OCIO_UNIT_TEST
 
@@ -207,7 +287,7 @@ void Apply(const OpRcPtrVec ops, float * source, long numPixels)
     }
 }
 
-OIIO_ADD_TEST(FinalizeOpVec, OptimizeCombine)
+OIIO_ADD_TEST(FinalizeOpVec, optimize_combine)
 {
     const float m1[16] = { 1.1f, 0.2f, 0.3f, 0.4f,
         0.5f, 1.6f, 0.7f, 0.8f,
@@ -227,11 +307,11 @@ OIIO_ADD_TEST(FinalizeOpVec, OptimizeCombine)
         1.0f, 1.0f, 1.0f, 1.0f };
     const float error = 1e-4f;
 
-    const float k[3] = { 0.18f, 0.18f, 0.18f };
-    const float m[3] = { 2.0f, 2.0f, 2.0f };
-    const float b[3] = { 0.1f, 0.1f, 0.1f };
-    const float base[3] = { 10.0f, 10.0f, 10.0f };
-    const float kb[3] = { 1.0f, 1.0f, 1.0f };
+    const double base = 10.0;
+    const double logSlope[3] = { 0.18, 0.18, 0.18 };
+    const double linSlope[3] = { 2.0, 2.0, 2.0 };
+    const double linOffset[3] = { 0.1, 0.1, 0.1 };
+    const double logOffset[3] = { 1.0, 1.0, 1.0 };
 
     // Combining ops
     {
@@ -271,7 +351,9 @@ OIIO_ADD_TEST(FinalizeOpVec, OptimizeCombine)
         // NoOp
         OIIO_CHECK_NO_THROW(CreateFileNoOp(ops, "NoOp"));
         OIIO_CHECK_NO_THROW(CreateMatrixOffsetOp(ops, m1, v1, TRANSFORM_DIR_FORWARD));
-        OIIO_CHECK_NO_THROW(CreateLogOp(ops, k, m, b, base, kb, OCIO::TRANSFORM_DIR_FORWARD));
+        OIIO_CHECK_NO_THROW(CreateLogOp(ops, base, logSlope, logOffset,
+                                        linSlope, linOffset,
+                                        OCIO::TRANSFORM_DIR_FORWARD));
 
         OIIO_CHECK_EQUAL(ops.size(), 3);
 
@@ -308,7 +390,9 @@ OIIO_ADD_TEST(FinalizeOpVec, OptimizeCombine)
         OIIO_CHECK_NO_THROW(CreateMatrixOffsetOp(ops, m1, v1, TRANSFORM_DIR_FORWARD));
         // NoOp
         OIIO_CHECK_NO_THROW(CreateFileNoOp(ops, "NoOp"));
-        OIIO_CHECK_NO_THROW(CreateLogOp(ops, k, m, b, base, kb, OCIO::TRANSFORM_DIR_FORWARD));
+        OIIO_CHECK_NO_THROW(CreateLogOp(ops, base, logSlope, logOffset,
+                                        linSlope, linOffset,
+                                        OCIO::TRANSFORM_DIR_FORWARD));
 
         OIIO_CHECK_EQUAL(ops.size(), 3);
 
@@ -343,7 +427,9 @@ OIIO_ADD_TEST(FinalizeOpVec, OptimizeCombine)
     {
         OpRcPtrVec ops;
         OIIO_CHECK_NO_THROW(CreateMatrixOffsetOp(ops, m1, v1, TRANSFORM_DIR_FORWARD));
-        OIIO_CHECK_NO_THROW(CreateLogOp(ops, k, m, b, base, kb, OCIO::TRANSFORM_DIR_FORWARD));
+        OIIO_CHECK_NO_THROW(CreateLogOp(ops, base, logSlope, logOffset,
+                                        linSlope, linOffset,
+                                        OCIO::TRANSFORM_DIR_FORWARD));
         // NoOp
         OIIO_CHECK_NO_THROW(CreateFileNoOp(ops, "NoOp"));
 
@@ -385,7 +471,9 @@ OIIO_ADD_TEST(FinalizeOpVec, OptimizeCombine)
         OIIO_CHECK_NO_THROW(CreateMatrixOffsetOp(ops, m1, v1, TRANSFORM_DIR_FORWARD));
         OIIO_CHECK_NO_THROW(CreateFileNoOp(ops, "NoOp"));
         OIIO_CHECK_NO_THROW(CreateFileNoOp(ops, "NoOp"));
-        OIIO_CHECK_NO_THROW(CreateLogOp(ops, k, m, b, base, kb, OCIO::TRANSFORM_DIR_FORWARD));
+        OIIO_CHECK_NO_THROW(CreateLogOp(ops, base, logSlope, logOffset,
+                                        linSlope, linOffset,
+                                        OCIO::TRANSFORM_DIR_FORWARD));
         OIIO_CHECK_NO_THROW(CreateFileNoOp(ops, "NoOp"));
         OIIO_CHECK_NO_THROW(CreateFileNoOp(ops, "NoOp"));
 
@@ -421,10 +509,10 @@ OIIO_ADD_TEST(FinalizeOpVec, OptimizeCombine)
 
 OIIO_ADD_TEST(Descriptions, basic)
 {
-    OCIO::OpData::Descriptions desc1;
+    OpData::Descriptions desc1;
     OIIO_CHECK_ASSERT( desc1 == desc1 );
 
-    OCIO::OpData::Descriptions desc2("My dummy comment");
+    OpData::Descriptions desc2("My dummy comment");
     OIIO_CHECK_ASSERT( desc1 != desc2 );
     OIIO_CHECK_ASSERT( desc2 != desc1 );
     OIIO_REQUIRE_EQUAL( desc2.size(), 1);
@@ -438,6 +526,41 @@ OIIO_ADD_TEST(Descriptions, basic)
     OIIO_REQUIRE_EQUAL( desc2.size(), 2);
     OIIO_CHECK_ASSERT( desc1 != desc2 );
     OIIO_CHECK_ASSERT( desc2 != desc1 );
+}
+
+OIIO_ADD_TEST(CreateOpVecFromOpDataVec, basic)
+{
+    OpDataVec opDataVec;
+    auto mat = MatrixOpData::CreateDiagonalMatrix(BIT_DEPTH_F32,
+                                                  BIT_DEPTH_F32,
+                                                  2.0);
+    opDataVec.push_back(mat);
+
+    auto range = std::make_shared<RangeOpData>(BIT_DEPTH_F32,
+                                               BIT_DEPTH_F32,
+                                               0.0f, 1.0f, 0.5f, 1.5f);
+
+    opDataVec.push_back(range);
+
+    OIIO_REQUIRE_EQUAL(opDataVec.size(), 2);
+
+    {
+        OpRcPtrVec ops;
+        OIIO_CHECK_NO_THROW(CreateOpVecFromOpDataVec(ops, opDataVec, TRANSFORM_DIR_FORWARD));
+        OIIO_REQUIRE_EQUAL(ops.size(), 2);
+
+        OIIO_CHECK_EQUAL(ops[0]->getInfo(), "<MatrixOffsetOp>");
+        OIIO_CHECK_EQUAL(ops[1]->getInfo(), "<RangeOp>");
+    }
+
+    {
+        OpRcPtrVec ops;
+        OIIO_CHECK_NO_THROW(CreateOpVecFromOpDataVec(ops, opDataVec, TRANSFORM_DIR_INVERSE));
+        OIIO_REQUIRE_EQUAL(ops.size(), 2);
+
+        OIIO_CHECK_EQUAL(ops[0]->getInfo(), "<RangeOp>");
+        OIIO_CHECK_EQUAL(ops[1]->getInfo(), "<MatrixOffsetOp>");
+    }
 }
 
 #endif

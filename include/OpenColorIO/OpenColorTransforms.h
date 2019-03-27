@@ -392,8 +392,9 @@ OCIO_NAMESPACE_ENTER
     
     //!cpp:class:: Represents exponent transform: pow( clamp(color), value)
     // 
-    // If the exponent is 1.0, this will not clamp. Otherwise, the input color
-    // will be clamped between [0.0, inf]
+    // For configs with version == 1: If the exponent is 1.0, this will not clamp. 
+    // Otherwise, the input color will be clamped between [0.0, inf].
+    // For configs with version > 1: Negative values are always clamped.
     class OCIOEXPORT ExponentTransform : public Transform
     {
     public:
@@ -413,8 +414,10 @@ OCIO_NAMESPACE_ENTER
 
         //!cpp:function::
         void setValue(const float * vec4);
+        void setValue(const double(&vec4)[4]);
         //!cpp:function::
         void getValue(float * vec4) const;
+        void getValue(double(&vec4)[4]) const;
     
     private:
         ExponentTransform();
@@ -436,6 +439,67 @@ OCIO_NAMESPACE_ENTER
     extern OCIOEXPORT std::ostream& operator<< (std::ostream&, const ExponentTransform&);
     
     
+    //!rst:: //////////////////////////////////////////////////////////////////
+    
+    //!cpp:class:: Represents power functions with a linear section in the shadows 
+    //             such as sRGB and L*.
+    //
+    // The basic formula is:
+    //   pow( (x + offset)/(1 + offset), gamma )
+    //   with the breakpoint at offset/(gamma - 1).
+    //
+    // Negative values are never clamped.
+    class OCIOEXPORT ExponentWithLinearTransform : public Transform
+    {
+    public:
+        //!cpp:function::
+        static ExponentWithLinearTransformRcPtr Create();
+        
+        //!cpp:function::
+        virtual TransformRcPtr createEditableCopy() const;
+        
+        //!cpp:function::
+        virtual TransformDirection getDirection() const;
+        //!cpp:function::
+        virtual void setDirection(TransformDirection dir);
+
+        //!cpp:function:: Validate the transform and throw if invalid.
+        virtual void validate() const;
+
+        //!cpp:function:: Set the exponent value for the power function for R, G, B, A.
+        // .. note::
+        //     The gamma values must be in the range of [1, 10]. Set the transform direction 
+        //     to inverse to obtain the effect of values less than 1.
+        void setGamma(const double(&values)[4]);
+        //!cpp:function::
+        void getGamma(double(&values)[4]) const;
+
+        //!cpp:function::
+        // .. note:: The offset values must be in the range [0, 0.9].
+        void setOffset(const double(&values)[4]);
+        //!cpp:function::
+        void getOffset(double(&values)[4]) const;
+
+    private:
+        ExponentWithLinearTransform();
+        ExponentWithLinearTransform(const ExponentWithLinearTransform &);
+        virtual ~ExponentWithLinearTransform();
+        
+        ExponentWithLinearTransform& operator= (const ExponentWithLinearTransform &);
+        
+        static void deleter(ExponentWithLinearTransform* t);
+        
+        class Impl;
+        friend class Impl;
+        Impl * m_impl;
+        Impl * getImpl() { return m_impl; }
+        const Impl * getImpl() const { return m_impl; }
+    };
+
+    //!cpp:function::
+    extern OCIOEXPORT std::ostream& operator<< (std::ostream&, const ExponentWithLinearTransform&);
+    
+
     //!rst:: //////////////////////////////////////////////////////////////////
     
     //!cpp:class::
@@ -499,7 +563,62 @@ OCIO_NAMESPACE_ENTER
     
     //!cpp:function::
     extern OCIOEXPORT std::ostream& operator<< (std::ostream&, const FileTransform&);
+
+
+    //!rst:: //////////////////////////////////////////////////////////////////
+
+    //!cpp:class:: Provides a set of hard-coded algorithmic building blocks 
+    // that are needed to accurately implement various common color transformations.
+    //
+    //
+    class OCIOEXPORT FixedFunctionTransform : public Transform
+    {
+    public:
+        //!cpp:function::
+        static FixedFunctionTransformRcPtr Create();
+        
+        //!cpp:function::
+        virtual TransformRcPtr createEditableCopy() const;
+        
+        //!cpp:function::
+        virtual TransformDirection getDirection() const;
+        //!cpp:function::
+        virtual void setDirection(TransformDirection dir);
+
+        //!cpp:function:: Will throw if data is not valid.
+        virtual void validate() const;
+
+        //!cpp:function::
+        virtual FixedFunctionStyle getStyle() const;
+        //!cpp:function:: Select which algorithm to use.
+        virtual void setStyle(FixedFunctionStyle style);
+
+        //!cpp:function::
+        size_t getNumParams() const;
+        //!cpp:function:: Set the parameters (for functions that require them).
+        void setParams(const double * params, size_t num);
+        //!cpp:function::
+        void getParams(double * params) const;
     
+    private:
+        FixedFunctionTransform();
+        FixedFunctionTransform(const FixedFunctionTransform &);
+        virtual ~FixedFunctionTransform();
+        
+        FixedFunctionTransform & operator= (const FixedFunctionTransform &);
+        
+        static void deleter(FixedFunctionTransform * t);
+        
+        class Impl;
+        friend class Impl;
+        Impl * m_impl;
+        Impl * getImpl() { return m_impl; }
+        const Impl * getImpl() const { return m_impl; }
+    };
+    
+    //!cpp:function::
+    extern OCIOEXPORT std::ostream& operator<< (std::ostream&, const FixedFunctionTransform&);
+
     
     //!rst:: //////////////////////////////////////////////////////////////////
     
@@ -552,7 +671,77 @@ OCIO_NAMESPACE_ENTER
     //!cpp:function::
     extern OCIOEXPORT std::ostream& operator<< (std::ostream&, const GroupTransform&);
     
-    
+
+    //!rst:: //////////////////////////////////////////////////////////////////
+
+    //!cpp:class::  Applies a logarithm with an affine transform before and after.
+    // Represents the Cineon lin-to-log type transforms.
+    //
+    // logSideSlope * log( linSideSlope * color + linSideOffset, base) + logSideOffset
+    //
+    // * Default values are: 1. * log( 1. * color + 0., 2.) + 0.
+    // * Only the rgb channels are affected.
+    class OCIOEXPORT LogAffineTransform : public Transform
+    {
+    public:
+        //!cpp:function::
+        static LogAffineTransformRcPtr Create();
+
+        //!cpp:function::
+        virtual TransformRcPtr createEditableCopy() const;
+
+        //!cpp:function::
+        virtual TransformDirection getDirection() const;
+        //!cpp:function::
+        virtual void setDirection(TransformDirection dir);
+
+        //!cpp:function:: Will throw if data is not valid.
+        virtual void validate() const;
+
+        //!cpp:function::
+        void setBase(double base);
+        //!cpp:function::
+        double getBase() const;
+
+        //!rst:: Set/Get values for each R, G, and B components.
+
+        //!cpp:function::
+        void setLogSideSlopeValue(const double(&values)[3]);
+        //!cpp:function::
+        void setLogSideOffsetValue(const double(&values)[3]);
+        //!cpp:function::
+        void setLinSideSlopeValue(const double(&values)[3]);
+        //!cpp:function::
+        void setLinSideOffsetValue(const double(&values)[3]);
+        //!cpp:function::
+        void getLogSideSlopeValue(double(&values)[3]) const;
+        //!cpp:function::
+        void getLogSideOffsetValue(double(&values)[3]) const;
+        //!cpp:function::
+        void getLinSideSlopeValue(double(&values)[3]) const;
+        //!cpp:function::
+        void getLinSideOffsetValue(double(&values)[3]) const;
+
+    private:
+        LogAffineTransform();
+        LogAffineTransform(const LogTransform &);
+        virtual ~LogAffineTransform();
+
+        LogAffineTransform& operator= (const LogAffineTransform &);
+
+        static void deleter(LogAffineTransform* t);
+
+        class Impl;
+        friend class Impl;
+        Impl * m_impl;
+        Impl * getImpl() { return m_impl; }
+        const Impl * getImpl() const { return m_impl; }
+    };
+
+    //!cpp:function::
+    extern OCIOEXPORT std::ostream& operator<< (std::ostream&, const LogAffineTransform&);
+
+
     //!rst:: //////////////////////////////////////////////////////////////////
     
     //!cpp:class:: Represents log transform: log(color, base)
@@ -578,10 +767,10 @@ OCIO_NAMESPACE_ENTER
         virtual void validate() const;
 
         //!cpp:function::
-        void setBase(float val);
+        void setBase(double val);
         //!cpp:function::
-        float getBase() const;
-    
+        double getBase() const;
+
     private:
         LogTransform();
         LogTransform(const LogTransform &);
@@ -600,10 +789,8 @@ OCIO_NAMESPACE_ENTER
     
     //!cpp:function::
     extern OCIOEXPORT std::ostream& operator<< (std::ostream&, const LogTransform&);
-    
-    
-    
-    
+
+
     //!rst:: //////////////////////////////////////////////////////////////////
     
     //!cpp:class::
@@ -660,8 +847,6 @@ OCIO_NAMESPACE_ENTER
     
     //!cpp:function::
     extern OCIOEXPORT std::ostream& operator<< (std::ostream&, const LookTransform&);
-    
-    
     
     
     //!rst:: //////////////////////////////////////////////////////////////////

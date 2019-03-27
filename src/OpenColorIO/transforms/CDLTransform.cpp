@@ -385,8 +385,17 @@ OCIO_NAMESPACE_ENTER
     
     void CDLTransform::validate() const
     {
-        Transform::validate();
-        getImpl()->validate();
+        try
+        {
+            Transform::validate();
+            getImpl()->validate();
+        }
+        catch(Exception & ex)
+        {
+            std::string errMsg("CDLTransform validation failed: ");
+            errMsg += ex.what();
+            throw Exception(errMsg.c_str());
+        }
     }
 
     const char * CDLTransform::getXML() const
@@ -540,12 +549,12 @@ OCIO_NAMESPACE_ENTER
     
     void CDLTransform::setID(const char * id)
     {
-        getImpl()->setId(id ? id : "");
+        getImpl()->setID(id ? id : "");
     }
     
     const char * CDLTransform::getID() const
     {
-        return getImpl()->getId().c_str();
+        return getImpl()->getID().c_str();
     }
     
     void CDLTransform::setDescription(const char * desc)
@@ -606,6 +615,8 @@ OCIO_NAMESPACE_ENTER
         
         if(config.getMajorVersion()==1)
         {
+            const double p[4] = { power4[0], power4[1], power4[2], power4[3] };
+
             if(combinedDir == TRANSFORM_DIR_FORWARD)
             {
                 // 1) Scale + Offset
@@ -613,7 +624,7 @@ OCIO_NAMESPACE_ENTER
                 
                 // 2) Power + Clamp at 0 (NB: This is not in accord with the 
                 //    ASC v1.2 spec since it also requires clamping at 1.)
-                CreateExponentOp(ops, power4, TRANSFORM_DIR_FORWARD);
+                CreateExponentOp(ops, p, TRANSFORM_DIR_FORWARD);
                 
                 // 3) Saturation (NB: Does not clamp at 0 and 1
                 //    as per ASC v1.2 spec)
@@ -627,7 +638,7 @@ OCIO_NAMESPACE_ENTER
                 
                 // 2) Power + Clamp at 0 (NB: This is not in accord with the 
                 //    ASC v1.2 spec since it also requires clamping at 1.)
-                CreateExponentOp(ops, power4, TRANSFORM_DIR_INVERSE);
+                CreateExponentOp(ops, p, TRANSFORM_DIR_INVERSE);
                 
                 // 1) Scale + Offset
                 CreateScaleOffsetOp(ops, scale4, offset4, TRANSFORM_DIR_INVERSE);
@@ -659,7 +670,7 @@ OCIO_NAMESPACE_EXIT
 
 namespace OCIO = OCIO_NAMESPACE;
 #include "unittest.h"
-#include "UnitTestFiles.h"
+#include "UnitTestUtils.h"
 
 OIIO_ADD_TEST(CDLTransform, equality)
 {
