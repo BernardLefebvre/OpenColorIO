@@ -167,9 +167,8 @@ OCIO::ConstProcessorRcPtr GetTransformFileProcessor(const std::string & fileName
 
     OCIO::ConfigRcPtr pConfig = OCIO::Config::Create();
 
-    // Set working directory to resolve references.
-    // TODO: Change this to rather use search path.
-    pConfig->setWorkingDir(OCIO::getTestFilesDir());
+    // Use searchPaths to resolve references.
+    pConfig->addSearchPath(OCIO::getTestFilesDir());
 
     return pConfig->getProcessor(pFileTransform);
 }
@@ -255,7 +254,7 @@ bool GetFilePath(std::string & path, OCIO::ConstOpRcPtr & op)
 OIIO_ADD_TEST(Reference, load_multiple_resolve_internal)
 {
     OCIO::ContextRcPtr context = OCIO::Context::Create();
-    context->setWorkingDir(OCIO::getTestFilesDir());
+    context->addSearchPath(OCIO::getTestFilesDir());
     std::string fileName("references_some_inverted.ctf");
     OCIO::OpRcPtrVec ops;
     OIIO_CHECK_NO_THROW(BuildOpsTest(ops, fileName, context, OCIO::TRANSFORM_DIR_FORWARD));
@@ -323,7 +322,7 @@ OIIO_ADD_TEST(Reference, load_multiple_resolve_internal)
 OIIO_ADD_TEST(Reference, load_nested_resolve_internal)
 {
     OCIO::ContextRcPtr context = OCIO::Context::Create();
-    context->setWorkingDir(OCIO::getTestFilesDir());
+    context->addSearchPath(OCIO::getTestFilesDir());
     std::string fileName("reference_nested.ctf");
     OCIO::OpRcPtrVec ops;
     OIIO_CHECK_NO_THROW(BuildOpsTest(ops, fileName, context, OCIO::TRANSFORM_DIR_FORWARD));
