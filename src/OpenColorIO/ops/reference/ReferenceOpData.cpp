@@ -154,7 +154,7 @@ OIIO_ADD_TEST(Reference, accessors)
 
 // Use OCIO public interface to load a file transform.
 // We can't validate what the processor contains.
-OCIO::ConstProcessorRcPtr LoadTransformFile(const std::string & fileName)
+OCIO::ConstProcessorRcPtr GetTransformFileProcessor(const std::string & fileName)
 {
     // (Path will be normalized, so this works even on Windows.)
     const std::string filePath(std::string(OCIO::getTestFilesDir()) + "/"
@@ -177,7 +177,7 @@ OCIO::ConstProcessorRcPtr LoadTransformFile(const std::string & fileName)
 OIIO_ADD_TEST(Reference, load_path_resolve_failing)
 {
     std::string fileName("reference_path_missing_file.ctf");
-    OIIO_CHECK_THROW_WHAT(LoadTransformFile(fileName), OCIO::Exception,
+    OIIO_CHECK_THROW_WHAT(GetTransformFileProcessor(fileName), OCIO::Exception,
                           "could not be located");
 }
 
@@ -185,7 +185,7 @@ OIIO_ADD_TEST(Reference, load_multiple_resolve)
 {
     std::string fileName("references_some_inverted.ctf");
     OCIO::ConstProcessorRcPtr processor;
-    OIIO_CHECK_NO_THROW(processor = LoadTransformFile(fileName));
+    OIIO_CHECK_NO_THROW(processor = GetTransformFileProcessor(fileName));
     OIIO_REQUIRE_ASSERT(processor);
 }
 
@@ -193,7 +193,7 @@ OIIO_ADD_TEST(Reference, load_same_twice_resolve)
 {
     std::string fileName("references_same_twice.ctf");
     OCIO::ConstProcessorRcPtr processor;
-    OIIO_CHECK_NO_THROW(processor = LoadTransformFile(fileName));
+    OIIO_CHECK_NO_THROW(processor = GetTransformFileProcessor(fileName));
     OIIO_REQUIRE_ASSERT(processor);
 }
 
@@ -201,35 +201,35 @@ OIIO_ADD_TEST(Reference, load_nested_resolve)
 {
     std::string fileName("reference_nested.ctf");
     OCIO::ConstProcessorRcPtr processor;
-    OIIO_CHECK_NO_THROW(processor = LoadTransformFile(fileName));
+    OIIO_CHECK_NO_THROW(processor = GetTransformFileProcessor(fileName));
     OIIO_REQUIRE_ASSERT(processor);
 }
 
 OIIO_ADD_TEST(Reference, load_cycle_itself_resolve_failing)
 {
     std::string fileName("reference_cycle_itself.ctf");
-    OIIO_CHECK_THROW_WHAT(LoadTransformFile(fileName), OCIO::Exception,
+    OIIO_CHECK_THROW_WHAT(GetTransformFileProcessor(fileName), OCIO::Exception,
                           "is creating a recursion");
 }
 
 OIIO_ADD_TEST(Reference, load_cycle_2_resolve_failing)
 {
     std::string fileName("reference_cycle_2levels.ctf");
-    OIIO_CHECK_THROW_WHAT(LoadTransformFile(fileName), OCIO::Exception,
+    OIIO_CHECK_THROW_WHAT(GetTransformFileProcessor(fileName), OCIO::Exception,
                           "is creating a recursion");
 }
 
 OIIO_ADD_TEST(Reference, load_cycle_3_resolve_failing)
 {
     std::string fileName("reference_cycle_3levels.ctf");
-    OIIO_CHECK_THROW_WHAT(LoadTransformFile(fileName), OCIO::Exception,
+    OIIO_CHECK_THROW_WHAT(GetTransformFileProcessor(fileName), OCIO::Exception,
                           "is creating a recursion");
 }
 
 OIIO_ADD_TEST(Reference, load_cycle_rel_resolve_failing)
 {
     std::string fileName("reference_cycle_path_not_equal.ctf");
-    OIIO_CHECK_THROW_WHAT(LoadTransformFile(fileName), OCIO::Exception,
+    OIIO_CHECK_THROW_WHAT(GetTransformFileProcessor(fileName), OCIO::Exception,
                           "is creating a recursion");
 }
 
