@@ -54,21 +54,11 @@ namespace OCIO = OCIO_NAMESPACE;
 
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
+#include <cmath>
 #include <algorithm>
 
 
 #include "glsl.h"
-
-
-#if defined __APPLE__
-    #define F_ISNAN(a) __inline_isnanf(a)
-#elif defined(_WIN32) || defined(_WIN64) || defined(_WINDOWS) || defined(_MSC_VER)
-    #define F_ISNAN(a) (_isnan(a)!=0)
-#else
-    #define F_ISNAN(a) __isnanf(a)
-#endif
-
 
 
 namespace Shader
@@ -117,7 +107,7 @@ namespace Shader
     {
         if ( ( (a >=  largeThreshold) && (b >=  largeThreshold) ) ||
              ( (a <= -largeThreshold) && (b <= -largeThreshold) ) ||
-             ( F_ISNAN(a) && F_ISNAN(b) ) )
+             ( std::isnan(a) && std::isnan(b) ) )
         {
             return true;
         }
@@ -134,7 +124,7 @@ namespace Shader
     {
         if ( ( (a >=  largeThreshold) && (b >=  largeThreshold) ) ||
              ( (a <= -largeThreshold) && (b <= -largeThreshold) ) ||
-             ( F_ISNAN(a) && F_ISNAN(b) ) )
+             ( std::isnan(a) && std::isnan(b) ) )
         {
           return true;
         }
@@ -200,14 +190,14 @@ namespace
     static constexpr unsigned g_winHeight  = 256;
     static constexpr unsigned g_components = 4;
 
-    OpenGLBuilderRcPtr g_oglBuilder;
+    OCIO::OpenGLBuilderRcPtr g_oglBuilder;
 
     GLuint g_imageTexID;
 
     void AllocateImageTexture()
     {
         const unsigned numEntries = g_winWidth * g_winHeight * g_components;
-        OCIOGPUTest::CustomValues::Values image(g_winWidth*g_winHeight*g_components, 0.0f);
+        OCIOGPUTest::CustomValues::Values image(numEntries, 0.0f);
 
         glGenTextures(1, &g_imageTexID);
 
@@ -261,12 +251,6 @@ namespace
         glutSwapBuffers();
     }
 
-    void CleanUp(void)
-    {
-        g_oglBuilder.reset();
-        glutDestroyWindow(g_win);
-    }
-
     void SetTestValue(float * image, float val, unsigned numComponents)
     {
         for (unsigned component = 0; component < numComponents; ++component)
@@ -302,12 +286,11 @@ namespace
             OCIOGPUTest::CustomValues tmp;
             tmp.m_originalInputValueSize = predefinedNumEntries;
             tmp.m_inputValues 
-                = OCIOGPUTest::CustomValues::Values(predefinedNumEntries, 
-                                                    test->getExpectedMinimalValue());
+                = OCIOGPUTest::CustomValues::Values(predefinedNumEntries, min);
 
             unsigned idx = 0;
             unsigned numEntries = predefinedNumEntries;
-            const unsigned numTests = g_components*g_components;
+            const unsigned numTests = g_components * g_components;
             if (testNaN)
             {
                 const float qnan = std::numeric_limits<float>::quiet_NaN();
@@ -319,20 +302,20 @@ namespace
             if (testInfinity)
             {
                 const float posinf = std::numeric_limits<float>::infinity();
-                SetTestValue(&g_image[idx], posinf, g_components);
+                SetTestValue(&tmp.m_inputValues[idx], posinf, g_components);
                 idx += numTests;
                 numEntries -= numTests;
 
                 const float neginf = -std::numeric_limits<float>::infinity();
-                SetTestValue(&g_image[idx], neginf, g_components);
+                SetTestValue(&tmp.m_inputValues[idx], neginf, g_components);
                 idx += numTests;
                 numEntries -= numTests;
             }
 
-            const float step 
-                = std::max(range / numEntries, test->getExpectedMinimalValue());
+            // Compute the value step based on the remaining number of values.
+            const float step = range / float(numEntries);
 
-            for(; idx<numEntries; ++idx)
+            for(; idx<predefinedNumEntries; ++idx)
             {
                 tmp.m_inputValues[idx] = min + step * float(idx);
             }
@@ -362,8 +345,9 @@ namespace
             {
                 OCIOGPUTest::CustomValues values;
                 values.m_originalInputValueSize = existingInputValues.size();
-                values.m_inputValues.resize(predefinedNumEntries, 
-                                            test->getExpectedMinimalValue());
+
+                // Resize the buffer to fit the expected input image size.
+                values.m_inputValues.resize(predefinedNumEntries, 0);
 
                 for(size_t idx=0; idx<numInputValues; ++idx)
                 {
@@ -399,7 +383,7 @@ namespace
         processor->extractGpuShaderInfo(shaderDesc);
 
         // Step 3: Create the OpenGL builder to prepare the GPU shader program.
-        g_oglBuilder = OpenGLBuilder::Create(shaderDesc);
+        g_oglBuilder = OCIO::OpenGLBuilder::Create(shaderDesc);
         g_oglBuilder->setVerbose(test->isVerbose());
 
         // Step 4: Allocate & upload all the LUTs in a dedicated GPU texture.
@@ -495,7 +479,9 @@ namespace
                     << "\tand gpu = {" 
                     << gpuImage[4*idx+0] << ", " << gpuImage[4*idx+1] << ", "
                     << gpuImage[4*idx+2] << ", " << gpuImage[4*idx+3] << "}\n"
-                    << "\twith epsilon=" 
+                    << "\twith " 
+                    << (test->getRelativeComparison() ? "relative " : "absolute ")
+                    << "epsilon=" 
                     << epsilon;
                 throw OCIO::Exception(err.str().c_str());
             }

@@ -225,7 +225,7 @@ public:
         processor->extractGpuShaderInfo(shaderDesc);
 
         // Use the helper OpenGL builder
-        m_oglBuilder = OpenGLBuilder::Create(shaderDesc);
+        m_oglBuilder = OCIO::OpenGLBuilder::Create(shaderDesc);
         m_oglBuilder->setVerbose(gpuinfo);
 
         // Allocate & upload all the LUTs
@@ -326,9 +326,10 @@ private:
         STATE_IMAGE_PROCESSED,
         STATE_IMAGE_READ
     };
-    State m_initState;
+
     GLint m_glwin;
-    OpenGLBuilderRcPtr m_oglBuilder;
+    State m_initState;
+    OCIO::OpenGLBuilderRcPtr m_oglBuilder;
     GLuint m_imageTexID;
     GLenum m_format;
     long m_width;
@@ -436,7 +437,13 @@ int main(int argc, const char **argv)
         img.resize(imgwidth*imgheight*components);
         memset(&img[0], 0, imgwidth*imgheight*components*sizeof(float));
         
-        f->read_image(OIIO::TypeDesc::TypeFloat, &img[0]);
+        const bool ok = f->read_image(OIIO::TypeDesc::FLOAT, &img[0]);
+        if(!ok)
+        {
+            std::cerr << "Error reading \"" << inputimage << "\" : " << f->geterror() << "\n";
+            exit(1);
+        }
+
 #if OIIO_VERSION < 10903
         OIIO::ImageInput::destroy(f);
 #endif
@@ -639,7 +646,13 @@ int main(int argc, const char **argv)
         }
         
         f->open(outputimage, spec);
-        f->write_image(OIIO::TypeDesc::FLOAT, &img[0]);
+        const bool ok = f->write_image(OIIO::TypeDesc::FLOAT, &img[0]);
+        if(!ok)
+        {
+            std::cerr << "Error writing \"" << outputimage << "\" : " << f->geterror() << "\n";
+            exit(1);
+        }
+
         f->close();
 #if OIIO_VERSION < 10903
         OIIO::ImageOutput::destroy(f);

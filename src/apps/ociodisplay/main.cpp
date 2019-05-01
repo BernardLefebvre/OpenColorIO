@@ -68,7 +68,7 @@ GLint g_win = 0;
 int g_winWidth = 0;
 int g_winHeight = 0;
 
-OpenGLBuilderRcPtr g_oglBuilder;
+OCIO::OpenGLBuilderRcPtr g_oglBuilder;
 
 GLuint g_imageTexID;
 float g_imageAspect;
@@ -129,13 +129,13 @@ static void InitImageTexture(const char * filename)
             img.resize(texWidth*texHeight*components);
             memset(&img[0], 0, texWidth*texHeight*components*sizeof(float));
 
-            f->read_image(
-#if (OIIO_VERSION >= 10800)
-                OIIO::TypeFloat, 
-#else
-                OIIO::TypeDesc::TypeFloat, 
-#endif
-                &img[0]);
+            const bool ok = f->read_image(OIIO::TypeDesc::FLOAT, &img[0]);
+            if(!ok)
+            {
+                std::cerr << "Error reading \"" << filename << "\" : " << f->geterror() << "\n";
+                exit(1);
+            }
+
 #if OIIO_VERSION < 10903
             OIIO::ImageInput::destroy(f);
 #endif
@@ -498,7 +498,7 @@ void UpdateOCIOGLState()
     processor->extractGpuShaderInfo(shaderDesc);
 
     // Step 3: Use the helper OpenGL builder
-    g_oglBuilder = OpenGLBuilder::Create(shaderDesc);
+    g_oglBuilder = OCIO::OpenGLBuilder::Create(shaderDesc);
     g_oglBuilder->setVerbose(g_gpuinfo);
 
     // Step 4: Allocate & upload all the LUTs
