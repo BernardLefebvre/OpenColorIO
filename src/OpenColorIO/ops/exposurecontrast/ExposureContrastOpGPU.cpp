@@ -27,6 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <algorithm>
+#include <cmath>
 
 #include <OpenColorIO/OpenColorIO.h>
 
@@ -157,7 +158,7 @@ void AddECVideoShader(GpuShaderText & st,
                       const std::string & contrastName,
                       const std::string & gammaName)
 {
-    double pivot = pow(std::max(EC::MIN_PIVOT, ec->getPivot()), EC::VIDEO_OETF_POWER);
+    double pivot = std::pow(std::max(EC::MIN_PIVOT, ec->getPivot()), EC::VIDEO_OETF_POWER);
 
     st.newLine() << "float exposure = pow( pow( 2., " << exposureName << " ), " << EC::VIDEO_OETF_POWER << ");";
     st.newLine() << "float contrast = max( " << EC::MIN_CONTRAST << ", "
@@ -188,7 +189,7 @@ void AddECVideoRevShader(GpuShaderText & st,
                          const std::string & contrastName,
                          const std::string & gammaName)
 {
-    double pivot = pow(std::max(EC::MIN_PIVOT, ec->getPivot()), EC::VIDEO_OETF_POWER);
+    double pivot = std::pow(std::max(EC::MIN_PIVOT, ec->getPivot()), EC::VIDEO_OETF_POWER);
 
     st.newLine() << "float exposure = pow( pow( 2., " << exposureName << " ), "
                                         << EC::VIDEO_OETF_POWER << ");";
@@ -223,7 +224,7 @@ void AddECLogarithmicShader(GpuShaderText & st,
                             const std::string & gammaName)
 {
     double pivot = std::max(EC::MIN_PIVOT, ec->getPivot());
-    float logPivot = (float)std::max(0., log2(pivot / 0.18) *
+    float logPivot = (float)std::max(0., std::log2(pivot / 0.18) *
                                          ec->getLogExposureStep() + 
                                          ec->getLogMidGray());
 
@@ -242,7 +243,7 @@ void AddECLogarithmicRevShader(GpuShaderText & st,
                                const std::string & gammaName)
 {
     double pivot = std::max(EC::MIN_PIVOT, ec->getPivot());
-    float logPivot = (float)std::max(0., log2(pivot / 0.18) *
+    float logPivot = (float)std::max(0., std::log2(pivot / 0.18) *
                                          ec->getLogExposureStep() + 
                                          ec->getLogMidGray());
 
