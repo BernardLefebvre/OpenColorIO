@@ -27,6 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <iostream>
+#include <string.h>
 
 #ifdef OCIO_TRUELIGHT_SUPPORT
 #include <truelight.h>
@@ -61,21 +62,36 @@ OCIO_NAMESPACE_ENTER
                         TransformDirection direction);
             virtual ~TruelightOp();
             
+            TransformDirection getDirection() const noexcept override { return m_direction; }
+
             OpRcPtr clone() const override;
             
             std::string getInfo() const override;
             std::string getCacheID() const override;
+
+            bool isNoOpType() const override { return false; }
             
             bool isNoOp() const override;
             bool isSameType(ConstOpRcPtr & op) const override;
             bool isInverse(ConstOpRcPtr & op) const override;
             bool hasChannelCrosstalk() const override;
             
-            void finalize() override;
+            bool supportedByLegacyShader() const override;
+
+            void finalize(FinalizationFlags fFlags) override;
+
+            ConstOpCPURcPtr getCPUOp() const override { return nullptr; }
+
             void apply(void * rgbaBuffer, long numPixels) const override;
+            void apply(const void * inImg, void * outImg, long numPixels) const override;
             
             void extractGpuShaderInfo(GpuShaderDescRcPtr & shaderDesc) const override;
-        
+
+            BitDepth getInputBitDepth() const override { return BIT_DEPTH_F32; }
+            void setInputBitDepth(BitDepth /*bitDepth*/) override { }
+            BitDepth getOutputBitDepth() const override { return BIT_DEPTH_F32; }
+            void setOutputBitDepth(BitDepth /*bitDepth*/) override { }
+
         private:
             TransformDirection m_direction;
 #ifdef OCIO_TRUELIGHT_SUPPORT
@@ -228,7 +244,7 @@ OCIO_NAMESPACE_ENTER
             return true;
         }
         
-        void TruelightOp::finalize()
+        void TruelightOp::finalize(FinalizationFlags /*fFlags*/)
         {
 #ifndef OCIO_TRUELIGHT_SUPPORT
             std::ostringstream err;
@@ -349,18 +365,32 @@ OCIO_NAMESPACE_ENTER
         
         void TruelightOp::apply(void * rgbaBuffer, long numPixels) const
         {
-            float * img = reinterpret_cast<float *>(rgbaBuffer);
+            apply(rgbaBuffer, rgbaBuffer, numPixels);
+        }
+        
+        void TruelightOp::apply(const void * inImg, void * outImg, long numPixels) const
+        {
+            const float * in = reinterpret_cast<const float *>(inImg);
+            float * out = reinterpret_cast<float *>(outImg);
 
             for(long pixelIndex = 0; pixelIndex < numPixels; ++pixelIndex)
             {
+                memcpy(out, in, 4 * sizeof(float));
+
 #ifdef OCIO_TRUELIGHT_SUPPORT
-                TruelightInstanceTransformF(m_truelight, img);
+                TruelightInstanceTransformF(m_truelight, out);
 #endif // OCIO_TRUELIGHT_SUPPORT
 
-                img += 4; // skip alpha
+                in  += 4; // skip alpha
+                out += 4;
             }
         }
-        
+
+        bool TruelightOp::supportedByLegacyShader() const
+        {
+            return false; 
+        }
+
         void TruelightOp::extractGpuShaderInfo(GpuShaderDescRcPtr & /*shaderDesc*/) const
         {
             throw Exception("TruelightOp does not define an gpu shader.");

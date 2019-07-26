@@ -35,6 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenColorIO/OpenColorIO.h>
 
+#include "DynamicProperty.h"
 #include "Mutex.h"
 
 OCIO_NAMESPACE_ENTER
@@ -77,6 +78,10 @@ OCIO_NAMESPACE_ENTER
         // All the Ops assume float pointers (i.e. always float bit depths) except 
         // the 1D LUT CPU Op where the finalization depends on input and output bit depths.
         virtual void apply(const void * inImg, void * outImg, long numPixels) const = 0;
+
+        virtual bool hasDynamicProperty(DynamicPropertyType type) const;
+        virtual DynamicPropertyRcPtr getDynamicProperty(DynamicPropertyType type) const;
+
     };
 
     class OpData;
@@ -120,17 +125,19 @@ OCIO_NAMESPACE_ENTER
         // Enumeration of all possible operator types.
         enum Type
         {
+            CDLType,           // A Color Decision List (aka CDL)
+            ExponentType,      // An exponent
+            ExposureContrastType, // An op for making interactive viewport adjustments
+            FixedFunctionType, // A fixed function (i.e. where the style defines the behavior)
+            GammaType,         // A gamma (i.e. enhancement of the Exponent)
+            LogType,           // A log
             Lut1DType,         // A 1D LUT
             Lut3DType,         // A 3D LUT
             MatrixType,        // A matrix
-            LogType,           // A log
-            ExponentType,      // An exponent
             RangeType,         // A range
             ReferenceType,     // A reference to an external file
-            CDLType,           // A Color Decision List (aka CDL)
-            FixedFunctionType, // A fixed function (i.e. where the style defines the behavior)
-            GammaType,         // A gamma (i.e. enhancement of the Exponent)
 
+            // Note: Keep at end of list.
             NoOpType
         };
 
@@ -243,7 +250,8 @@ OCIO_NAMESPACE_ENTER
         // returns true if the op's output does not combine input channels
         virtual bool hasChannelCrosstalk() const = 0;
 
-        virtual bool operator==(const OpData& other) const;
+        virtual bool operator==(const OpData & other) const;
+        bool operator!=(const OpData & other) const = delete;
 
         virtual void finalize() = 0;
 
@@ -266,15 +274,17 @@ OCIO_NAMESPACE_ENTER
     class Op;
     typedef OCIO_SHARED_PTR<Op> OpRcPtr;
     typedef OCIO_SHARED_PTR<const Op> ConstOpRcPtr;
-    typedef std::vector<OpRcPtr> OpRcPtrVec;
+    class OpRcPtrVec;
     
     std::string SerializeOpVec(const OpRcPtrVec & ops, int indent=0);
     bool IsOpVecNoOp(const OpRcPtrVec & ops);
     
-    void FinalizeOpVec(OpRcPtrVec & opVec, bool optimize=true);
+    void FinalizeOpVec(OpRcPtrVec & opVec, FinalizationFlags fFlags);
     
-    void OptimizeOpVec(OpRcPtrVec & result);
-    
+    void OptimizeOpVec(OpRcPtrVec & result, OptimizationFlags oFlags);
+
+    void UnifyDynamicProperties(OpRcPtrVec & ops);
+   
     void CreateOpVecFromOpData(OpRcPtrVec & ops,
                                const OpDataRcPtr & opData,
                                TransformDirection dir);
@@ -288,6 +298,8 @@ OCIO_NAMESPACE_ENTER
         public:
             virtual ~Op();
             
+            virtual TransformDirection getDirection() const noexcept = 0;
+
             virtual OpRcPtr clone() const = 0;
             
             // Something short, and printable.
@@ -296,7 +308,10 @@ OCIO_NAMESPACE_ENTER
             
             // This should yield a string of not unreasonable length.
             // It can only be called after finalize()
-            virtual std::string getCacheID() const { return m_cacheID; }            
+            virtual std::string getCacheID() const { return m_cacheID; }
+
+            virtual bool isNoOpType() const { return m_data->getType() == OpData::NoOpType; }
+
             // Is the processing a noop? I.e, does apply do nothing.
             // (Even no-ops may define Allocation though.)
             // This must be implemented in a manner where its valid to
@@ -327,9 +342,9 @@ OCIO_NAMESPACE_ENTER
             // This is called a single time after construction.
             // Final pre-processing and safety checks should happen here,
             // rather than in the constructor.
-            
-            virtual void finalize() = 0;
-            
+
+            virtual void finalize(FinalizationFlags fFlags) = 0;
+
             // Render the specified pixels.
             //
             // This must be safe to call in a multi-threaded context.
@@ -337,12 +352,12 @@ OCIO_NAMESPACE_ENTER
             // caching, must thus be appropriately mutexed.
 
             virtual void apply(void * img, long numPixels) const
-            { m_cpuOp->apply(img, img, numPixels); }
+            { getCPUOp()->apply(img, img, numPixels); }
 
             virtual void apply(const void * inImg, void * outImg, long numPixels) const
-            { m_cpuOp->apply(inImg, outImg, numPixels); }
+            { getCPUOp()->apply(inImg, outImg, numPixels); }
 
-            
+
             // Is this op supported by the legacy shader text generator ?
             virtual bool supportedByLegacyShader() const { return true; }
 
@@ -355,19 +370,22 @@ OCIO_NAMESPACE_ENTER
             virtual void setInputBitDepth(BitDepth bitdepth) { m_data->setInputBitDepth(bitdepth); }
             virtual void setOutputBitDepth(BitDepth bitdepth) { m_data->setOutputBitDepth(bitdepth); }
 
-            ConstOpDataRcPtr data() const { return std::const_pointer_cast<const OpData>(m_data); }
+            virtual bool isDynamic() const;
+            virtual bool hasDynamicProperty(DynamicPropertyType type) const;
+            virtual DynamicPropertyRcPtr getDynamicProperty(DynamicPropertyType type) const;
+            virtual void replaceDynamicProperty(DynamicPropertyType type,
+                                                DynamicPropertyImplRcPtr prop);
 
-            ConstOpCPURcPtr getCPUOp() const { return m_cpuOp; }
+            // On-demand creation of the OpCPU instance.
+            virtual ConstOpCPURcPtr getCPUOp() const = 0;
+
+            ConstOpDataRcPtr data() const { return std::const_pointer_cast<const OpData>(m_data); }
 
         protected:
             Op();
             OpDataRcPtr & data() { return m_data; }
 
             std::string m_cacheID;
-
-            // This holds a CPU renderer for the specific op that is specialized 
-            // to the actual parameters being used.
-            OpCPURcPtr  m_cpuOp;
 
         private:
             Op(const Op &) = delete;
@@ -378,6 +396,71 @@ OCIO_NAMESPACE_ENTER
     };
     
     std::ostream& operator<< (std::ostream&, const Op&);
+
+    // The class handles a list of ops and enforces bit depth consistency between ops.
+    //
+    // Note: List only manages shared pointers i.e. it never clones ops.
+    class OpRcPtrVec
+    {
+        typedef std::vector<OpRcPtr> Type;
+        Type m_ops;
+
+    public:
+        typedef Type::value_type value_type;
+        typedef Type::size_type size_type;
+
+        typedef Type::iterator iterator;
+        typedef Type::const_iterator const_iterator;
+
+        typedef Type::reference reference;
+        typedef Type::const_reference const_reference;
+
+        OpRcPtrVec() {}
+        ~OpRcPtrVec() {}
+        OpRcPtrVec(const OpRcPtrVec & v);
+        OpRcPtrVec & operator=(const OpRcPtrVec & v);
+        // Note: It copies elements i.e. no clone.
+        OpRcPtrVec & operator+=(const OpRcPtrVec & v);
+
+        size_type size() const { return m_ops.size(); }
+
+        iterator begin() noexcept { return m_ops.begin(); }
+        const_iterator begin() const noexcept { return m_ops.begin(); }
+        iterator end() noexcept { return m_ops.end(); }
+        const_iterator end() const noexcept { return m_ops.end(); }
+
+        const OpRcPtr & operator[](size_type idx) const { return m_ops[idx]; }
+
+        iterator erase(const_iterator position);       
+        iterator erase(const_iterator first, const_iterator last);
+
+        // Insert at the 'position' the elements from the range ['first', 'last'[ 
+        // respecting the element's order. Inserting elements at a given position 
+        // shifts elements starting at 'position' to the right.
+        // 
+        // Note: Inserting an empty range will do nothing and inserting 
+        // in an empty list appends elements from the range ['first', 'last'[.
+        //
+        // Note: It copies elements i.e. no clone.
+        void insert(const_iterator position, const_iterator first, const_iterator last);
+
+        void clear() noexcept { m_ops.clear(); }
+        bool empty() const noexcept { return m_ops.empty(); }
+
+        void push_back(const value_type & val);
+
+        const_reference back() const;
+        const_reference front() const;
+
+        // Validate the bit depth consistency between Ops.
+        void validate() const;
+
+        OpRcPtrVec clone() const;
+
+    protected:
+        void adjustBitDepths();
+    };
+
 }
 OCIO_NAMESPACE_EXIT
 

@@ -156,6 +156,10 @@ OCIO_NAMESPACE_ENTER
         class XMLParserHelper
         {
         public:
+            XMLParserHelper() = delete;
+            XMLParserHelper(const XMLParserHelper &) = delete;
+            XMLParserHelper & operator=(const XMLParserHelper &) = delete;
+
             XMLParserHelper(const std::string & fileName)
                 : m_parser(XML_ParserCreate(NULL))
                 , m_fileName(fileName)
@@ -184,33 +188,30 @@ OCIO_NAMESPACE_ENTER
                 while (istream.good())
                 {
                     std::getline(istream, line);
+                    line.push_back('\n');
                     ++m_lineNumber;
 
-                    Parse(line);
+                    Parse(line, !istream.good());
                 }
             }
-            void Parse(const std::string & buffer)
+            void Parse(const std::string & buffer, bool lastLine)
             {
-                int done = 0;
+                const int done = lastLine?1:0;
 
-                do
+                if (XML_STATUS_ERROR == XML_Parse(m_parser, buffer.c_str(), (int)buffer.size(), done))
                 {
-                    if (XML_STATUS_ERROR == XML_Parse(m_parser, buffer.c_str(), (int)buffer.size(), done))
+                    XML_Error eXpatErrorCode = XML_GetErrorCode(m_parser);
+                    if (eXpatErrorCode == XML_ERROR_TAG_MISMATCH)
                     {
-                        XML_Error eXpatErrorCode = XML_GetErrorCode(m_parser);
-                        if (eXpatErrorCode == XML_ERROR_TAG_MISMATCH)
-                        {
-                            Throw("XML parsing error (unbalanced element tags)");
-                        }
-                        else
-                        {
-                            std::string error("XML parsing error: ");
-                            error += XML_ErrorString(XML_GetErrorCode(m_parser));
-                            Throw(error);
-                        }
+                        Throw("XML parsing error (unbalanced element tags)");
                     }
-                } while (done);
-
+                    else
+                    {
+                        std::string error("XML parsing error: ");
+                        error += XML_ErrorString(XML_GetErrorCode(m_parser));
+                        Throw(error);
+                    }
+                }
             }
 
             void getLut(int & lutSize, std::vector<float> & lut) const
@@ -268,8 +269,6 @@ OCIO_NAMESPACE_ENTER
                 os << ". At line (" << m_lineNumber << ")";
                 throw Exception(os.str().c_str());
             }
-
-            XMLParserHelper() {};
 
             // Start the parsing of one element
             static void StartElementHandler(void *userData,
@@ -431,11 +430,12 @@ OCIO_NAMESPACE_ENTER
                 }
 
                 if (len == 0) return;
-
                 if (len<0 || !s || !*s)
                 {
                     pImpl->Throw("XML parsing error: attribute illegal");
                 }
+                // Parsing a single new line. This is valid.
+                if (len == 1 && s[0] == '\n') return;
 
                 if (pImpl->m_size)
                 {
@@ -612,77 +612,77 @@ OCIO_NAMESPACE_EXIT
 
 #ifdef OCIO_UNIT_TEST
 
-#include "unittest.h"
+#include "UnitTest.h"
 
 OCIO_NAMESPACE_USING
 
 
 
-OIIO_ADD_TEST(FileFormatIridasLook, hexasciitoint)
+OCIO_ADD_TEST(FileFormatIridasLook, hexasciitoint)
 {
     {
     char ival = 0;
     bool success = hexasciitoint(ival, 'a');
-    OIIO_CHECK_EQUAL(success, true); OIIO_CHECK_EQUAL(ival, 10);
+    OCIO_CHECK_EQUAL(success, true); OCIO_CHECK_EQUAL(ival, 10);
     }
     
     {
     char ival = 0;
     bool success = hexasciitoint(ival, 'A');
-    OIIO_CHECK_EQUAL(success, true); OIIO_CHECK_EQUAL(ival, 10);
+    OCIO_CHECK_EQUAL(success, true); OCIO_CHECK_EQUAL(ival, 10);
     }
     
     {
     char ival = 0;
     bool success = hexasciitoint(ival, 'f');
-    OIIO_CHECK_EQUAL(success, true); OIIO_CHECK_EQUAL(ival, 15);
+    OCIO_CHECK_EQUAL(success, true); OCIO_CHECK_EQUAL(ival, 15);
     }
     
     {
     char ival = 0;
     bool success = hexasciitoint(ival, 'F');
-    OIIO_CHECK_EQUAL(success, true); OIIO_CHECK_EQUAL(ival, 15);
+    OCIO_CHECK_EQUAL(success, true); OCIO_CHECK_EQUAL(ival, 15);
     }
     
     {
     char ival = 0;
     bool success = hexasciitoint(ival, '0');
-    OIIO_CHECK_EQUAL(success, true); OIIO_CHECK_EQUAL(ival, 0);
+    OCIO_CHECK_EQUAL(success, true); OCIO_CHECK_EQUAL(ival, 0);
     }
     
     {
     char ival = 0;
     bool success = hexasciitoint(ival, '0');
-    OIIO_CHECK_EQUAL(success, true); OIIO_CHECK_EQUAL(ival, 0);
+    OCIO_CHECK_EQUAL(success, true); OCIO_CHECK_EQUAL(ival, 0);
     }
     
     {
     char ival = 0;
     bool success = hexasciitoint(ival, '9');
-    OIIO_CHECK_EQUAL(success, true); OIIO_CHECK_EQUAL(ival, 9);
+    OCIO_CHECK_EQUAL(success, true); OCIO_CHECK_EQUAL(ival, 9);
     }
     
     {
     char ival = 0;
     bool success = hexasciitoint(ival, '\n');
-    OIIO_CHECK_EQUAL(success, false);
+    OCIO_CHECK_EQUAL(success, false);
     }
     
     {
     char ival = 0;
     bool success = hexasciitoint(ival, 'j');
-    OIIO_CHECK_EQUAL(success, false);
+    OCIO_CHECK_EQUAL(success, false);
     }
     
     {
     char ival = 0;
     bool success = hexasciitoint(ival, 'x');
-    OIIO_CHECK_EQUAL(success, false);
+    OCIO_CHECK_EQUAL(success, false);
     }
 }
 
 
-OIIO_ADD_TEST(FileFormatIridasLook, hexasciitofloat)
+OCIO_ADD_TEST(FileFormatIridasLook, hexasciitofloat)
 {
     //>>> import binascii, struct
     //>> struct.unpack("<f", binascii.unhexlify("AD10753F"))[0]
@@ -691,30 +691,30 @@ OIIO_ADD_TEST(FileFormatIridasLook, hexasciitofloat)
     {
     float fval = 0.0f;
     bool success = hexasciitofloat(fval, "0000003F");
-    OIIO_CHECK_EQUAL(success, true); OIIO_CHECK_EQUAL(fval, 0.5f);
+    OCIO_CHECK_EQUAL(success, true); OCIO_CHECK_EQUAL(fval, 0.5f);
     }
     
     {
     float fval = 0.0f;
     bool success = hexasciitofloat(fval, "0000803F");
-    OIIO_CHECK_EQUAL(success, true); OIIO_CHECK_EQUAL(fval, 1.0f);
+    OCIO_CHECK_EQUAL(success, true); OCIO_CHECK_EQUAL(fval, 1.0f);
     }
     
     {
     float fval = 0.0f;
     bool success = hexasciitofloat(fval, "AD10753F");
-    OIIO_CHECK_EQUAL(success, true); OIIO_CHECK_EQUAL(fval, 0.9572857022285461f);
+    OCIO_CHECK_EQUAL(success, true); OCIO_CHECK_EQUAL(fval, 0.9572857022285461f);
     }
     
     {
     float fval = 0.0f;
     bool success = hexasciitofloat(fval, "AD10X53F");
-    OIIO_CHECK_EQUAL(success, false);
+    OCIO_CHECK_EQUAL(success, false);
     }
 }
 
 
-OIIO_ADD_TEST(FileFormatIridasLook, simple3d)
+OCIO_ADD_TEST(FileFormatIridasLook, simple3d)
 {
     std::ostringstream strebuf;
     strebuf << "<?xml version=\"1.0\" ?>" << "\n";
@@ -946,12 +946,12 @@ OIIO_ADD_TEST(FileFormatIridasLook, simple3d)
     LocalCachedFileRcPtr looklut = DynamicPtrCast<LocalCachedFile>(cachedFile);
 
     // Check LUT size is correct
-    OIIO_CHECK_EQUAL(looklut->lut3D->size[0], 8);
-    OIIO_CHECK_EQUAL(looklut->lut3D->size[1], 8);
-    OIIO_CHECK_EQUAL(looklut->lut3D->size[2], 8);
+    OCIO_CHECK_EQUAL(looklut->lut3D->size[0], 8);
+    OCIO_CHECK_EQUAL(looklut->lut3D->size[1], 8);
+    OCIO_CHECK_EQUAL(looklut->lut3D->size[2], 8);
 
     // Check LUT values
-    OIIO_CHECK_EQUAL(looklut->lut3D->lut.size(), 8*8*8*3);
+    OCIO_CHECK_EQUAL(looklut->lut3D->lut.size(), 8*8*8*3);
 
     double cube[8 * 8 * 8 * 3] = {
         -0.00000, -0.00000, -0.00000,
@@ -1470,12 +1470,12 @@ OIIO_ADD_TEST(FileFormatIridasLook, simple3d)
 
     // check cube data
     for(unsigned int i = 0; i < looklut->lut3D->lut.size(); ++i) {
-        OIIO_CHECK_CLOSE(cube[i], looklut->lut3D->lut[i], 1e-4);
+        OCIO_CHECK_CLOSE(cube[i], looklut->lut3D->lut[i], 1e-4);
     }
 }
 
 
-OIIO_ADD_TEST(FileFormatIridasLook, fail_on_mask)
+OCIO_ADD_TEST(FileFormatIridasLook, fail_on_mask)
 {
     std::ostringstream strebuf;
     strebuf << "<?xml version=\"1.0\" ?>" << "\n";
@@ -1541,7 +1541,7 @@ OIIO_ADD_TEST(FileFormatIridasLook, fail_on_mask)
     LocalFileFormat tester;
     std::string emptyString;
 
-    OIIO_CHECK_THROW_WHAT(
+    OCIO_CHECK_THROW_WHAT(
         tester.Read(infile, emptyString),
         Exception, "Cannot load .look LUT containing mask");
 

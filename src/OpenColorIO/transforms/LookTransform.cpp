@@ -62,7 +62,9 @@ OCIO_NAMESPACE_ENTER
         Impl() :
             dir_(TRANSFORM_DIR_FORWARD)
         { }
-        
+
+        Impl(const Impl &) = delete;
+
         ~Impl()
         { }
         
@@ -282,7 +284,7 @@ OCIO_NAMESPACE_ENTER
                     currentColorSpace = processColorSpace;
                 }
                 
-                std::copy(tmpOps.begin(), tmpOps.end(), std::back_inserter(ops));
+                ops += tmpOps;
             }
         }
     }
@@ -414,7 +416,7 @@ OCIO_NAMESPACE_ENTER
             if(success)
             {
                 currentColorSpace = cs;
-                std::copy(tmpOps.begin(), tmpOps.end(), std::back_inserter(ops));
+                ops += tmpOps;
             }
             else
             {

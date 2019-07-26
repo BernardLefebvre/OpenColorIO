@@ -87,11 +87,20 @@ public:
         MONCURVE_REV
     };
 
-    static const char * convertStyleToString(Style style);
+    static Style ConvertStringToStyle(const char * str);
+    static const char * ConvertStyleToString(Style style);
 
     typedef std::vector<double> Params;
 
     GammaOpData();
+
+    GammaOpData(BitDepth inBitDepth,
+                BitDepth outBitDepth,
+                const Style & style,
+                const Params & redParams,
+                const Params & greenParams,
+                const Params & blueParams,
+                const Params & alphaParams);
 
     GammaOpData(BitDepth inBitDepth,
                 BitDepth outBitDepth,
@@ -159,7 +168,7 @@ public:
 
     virtual void validateParameters() const;
 
-    bool operator==(const GammaOpData& other) const;
+    bool operator==(const OpData& other) const override;
 
     virtual void finalize() override;
 

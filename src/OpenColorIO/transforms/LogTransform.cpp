@@ -57,7 +57,9 @@ OCIO_NAMESPACE_ENTER
         Impl()
             : LogOpData(2.0f, TRANSFORM_DIR_FORWARD)
         { }
-        
+
+        Impl(const Impl &) = delete;
+
         ~Impl()
         { }
 
@@ -69,9 +71,6 @@ OCIO_NAMESPACE_ENTER
             }
             return *this;
         }
-
-    private:        
-        Impl(const Impl & rhs);
     };
     
     ///////////////////////////////////////////////////////////////////////////
@@ -169,20 +168,20 @@ OCIO_NAMESPACE_EXIT
 #ifdef OCIO_UNIT_TEST
 
 namespace OCIO = OCIO_NAMESPACE;
-#include "unittest.h"
+#include "UnitTest.h"
 
-OIIO_ADD_TEST(LogTransform, basic)
+OCIO_ADD_TEST(LogTransform, basic)
 {
     const OCIO::LogTransformRcPtr log = OCIO::LogTransform::Create();
 
-    OIIO_CHECK_EQUAL(log->getBase(), 2.0f);
-    OIIO_CHECK_EQUAL(log->getDirection(), OCIO::TRANSFORM_DIR_FORWARD);
+    OCIO_CHECK_EQUAL(log->getBase(), 2.0f);
+    OCIO_CHECK_EQUAL(log->getDirection(), OCIO::TRANSFORM_DIR_FORWARD);
 
     log->setDirection(OCIO::TRANSFORM_DIR_INVERSE);
-    OIIO_CHECK_EQUAL(log->getDirection(), OCIO::TRANSFORM_DIR_INVERSE);
+    OCIO_CHECK_EQUAL(log->getDirection(), OCIO::TRANSFORM_DIR_INVERSE);
 
     log->setBase(10.0f);
-    OIIO_CHECK_EQUAL(log->getBase(), 10.0f);
+    OCIO_CHECK_EQUAL(log->getBase(), 10.0f);
 }
 
 #endif

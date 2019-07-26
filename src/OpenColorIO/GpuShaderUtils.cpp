@@ -222,6 +222,12 @@ OCIO_NAMESPACE_ENTER
         return *this;
     }
 
+    GpuShaderText::GpuShaderLine& GpuShaderText::GpuShaderLine::operator<<(double value)
+    {
+        m_text->m_ossLine << getFloatString(value, m_text->m_lang);
+        return *this;
+    }
+
     GpuShaderText::GpuShaderLine& GpuShaderText::GpuShaderLine::operator<<(unsigned value)
     {
         m_text->m_ossLine << value;
@@ -348,6 +354,11 @@ OCIO_NAMESPACE_ENTER
     }
 
     std::string GpuShaderText::vec3fConst(const float v) const
+    {
+        return vec3fConst(getFloatString(v, m_lang));
+    }
+
+    std::string GpuShaderText::vec3fConst(const double v) const
     {
         return vec3fConst(getFloatString(v, m_lang));
     }
@@ -551,6 +562,12 @@ OCIO_NAMESPACE_ENTER
         return getTexSample<3>(m_lang, textureName, getSamplerName(textureName), coords);
     }
 
+
+    void GpuShaderText::declareUniformFloat(const std::string & uniformName)
+    {
+        newLine() << "uniform float " << uniformName << ";";
+    }
+
     // Keep the method private as only float & double types are expected
     template<typename T>
     std::string matrix4Mul(const T * m4x4, const std::string & vecName, GpuLanguage lang)
@@ -706,15 +723,15 @@ OCIO_NAMESPACE_EXIT
 #ifdef OCIO_UNIT_TEST
 
 namespace OCIO = OCIO_NAMESPACE;
-#include "unittest.h"
+#include "UnitTest.h"
 
-OIIO_ADD_TEST(GpuShaderUtils, FloatToString)
+OCIO_ADD_TEST(GpuShaderUtils, FloatToString)
 {
-    OIIO_CHECK_EQUAL(OCIO::getFloatString(1.0f, OCIO::GPU_LANGUAGE_GLSL_1_3), "1.");
-    OIIO_CHECK_EQUAL(OCIO::getFloatString(-11.0f, OCIO::GPU_LANGUAGE_GLSL_1_3), "-11.");
-    OIIO_CHECK_EQUAL(OCIO::getFloatString(-1.0f, OCIO::GPU_LANGUAGE_GLSL_1_3), "-1.");
-    OIIO_CHECK_EQUAL(OCIO::getFloatString((float)-1, OCIO::GPU_LANGUAGE_GLSL_1_3), "-1.");
-    OIIO_CHECK_EQUAL(OCIO::getFloatString((float)1, OCIO::GPU_LANGUAGE_GLSL_1_3), "1.");
+    OCIO_CHECK_EQUAL(OCIO::getFloatString(1.0f, OCIO::GPU_LANGUAGE_GLSL_1_3), "1.");
+    OCIO_CHECK_EQUAL(OCIO::getFloatString(-11.0f, OCIO::GPU_LANGUAGE_GLSL_1_3), "-11.");
+    OCIO_CHECK_EQUAL(OCIO::getFloatString(-1.0f, OCIO::GPU_LANGUAGE_GLSL_1_3), "-1.");
+    OCIO_CHECK_EQUAL(OCIO::getFloatString((float)-1, OCIO::GPU_LANGUAGE_GLSL_1_3), "-1.");
+    OCIO_CHECK_EQUAL(OCIO::getFloatString((float)1, OCIO::GPU_LANGUAGE_GLSL_1_3), "1.");
 }
 
 #endif // OCIO_UNIT_TEST

@@ -54,7 +54,7 @@ typedef OCIO_SHARED_PTR<const CDLOp> ConstCDLOpRcPtr;
 class CDLOp : public Op
 {
 public:
-    CDLOp();
+    CDLOp() = delete;
 
     CDLOp(CDLOpDataRcPtr & cdl, TransformDirection direction);
 
@@ -71,19 +71,23 @@ public:
 
     virtual ~CDLOp();
     
-    virtual OpRcPtr clone() const;
+    TransformDirection getDirection() const noexcept override { return m_direction; }
+
+    OpRcPtr clone() const override;
     
-    virtual std::string getInfo() const;
+    std::string getInfo() const override;
     
-    virtual bool isIdentity() const;
-    virtual bool isSameType(ConstOpRcPtr & op) const;
-    virtual bool isInverse(ConstOpRcPtr & op) const;
-    virtual bool canCombineWith(ConstOpRcPtr & op) const;
-    virtual void combineWith(OpRcPtrVec & ops, ConstOpRcPtr & secondOp) const;
+    bool isIdentity() const override;
+    bool isSameType(ConstOpRcPtr & op) const override;
+    bool isInverse(ConstOpRcPtr & op) const override;
+    bool canCombineWith(ConstOpRcPtr & op) const override;
+    void combineWith(OpRcPtrVec & ops, ConstOpRcPtr & secondOp) const override;
     
-    virtual void finalize();
+    void finalize(FinalizationFlags fFlags) override;
+
+    ConstOpCPURcPtr getCPUOp() const override;
     
-    virtual void extractGpuShaderInfo(GpuShaderDescRcPtr & shaderDesc) const;
+    void extractGpuShaderInfo(GpuShaderDescRcPtr & shaderDesc) const override;
 
 protected:
     ConstCDLOpDataRcPtr cdlData() const { return DynamicPtrCast<const CDLOpData>(data()); }
@@ -93,13 +97,6 @@ private:
     TransformDirection m_direction;
 };
 
-
-CDLOp::CDLOp()
-    :   Op()
-    ,   m_direction(TRANSFORM_DIR_FORWARD)
-{           
-    data().reset(new CDLOpData());
-}
 
 CDLOp::CDLOp(CDLOpDataRcPtr & cdl, TransformDirection direction)
     :   Op()
@@ -208,25 +205,19 @@ void CDLOp::combineWith(OpRcPtrVec & /*ops*/, ConstOpRcPtr & secondOp) const
     // TODO: Implement CDLOp::combineWith()
 }
 
-void CDLOp::finalize()
+void CDLOp::finalize(FinalizationFlags /*fFlags*/)
 {
-    const CDLOp & constThis = *this;
-
     if(m_direction == TRANSFORM_DIR_INVERSE)
     {
         data() = cdlData()->inverse();
         m_direction = TRANSFORM_DIR_FORWARD;
     }
 
-    // Only the 32f processing is natively supported
+    // Only 32f processing is natively supported.
     cdlData()->setInputBitDepth(BIT_DEPTH_F32);
     cdlData()->setOutputBitDepth(BIT_DEPTH_F32);
 
-    cdlData()->validate();
     cdlData()->finalize();
-
-    ConstCDLOpDataRcPtr cdlOpData = constThis.cdlData();
-    m_cpuOp = CDLOpCPU::GetRenderer(cdlOpData);
 
     // Create the cacheID
     std::ostringstream cacheIDStream;
@@ -236,6 +227,12 @@ void CDLOp::finalize()
     cacheIDStream << ">";
 
     m_cacheID = cacheIDStream.str();
+}
+
+ConstOpCPURcPtr CDLOp::getCPUOp() const
+{
+    ConstCDLOpDataRcPtr data = cdlData();
+    return CDLOpCPU::GetRenderer(data);
 }
 
 void CDLOp::extractGpuShaderInfo(GpuShaderDescRcPtr & shaderDesc) const
@@ -372,17 +369,6 @@ void CDLOp::extractGpuShaderInfo(GpuShaderDescRcPtr & shaderDesc) const
 
 
 
-
-void CreateCDLOp(OpRcPtrVec & ops,
-                 CDLOpDataRcPtr & cdlData, 
-                 TransformDirection direction)
-{
-    if(cdlData->isNoOp()) return;
-
-    ops.push_back(CDLOpRcPtr(new CDLOp(cdlData, direction)));
-}
-
-
 void CreateCDLOp(OpRcPtrVec & ops,
                  const std::string & id,
                  const OpData::Descriptions & desc,
@@ -405,6 +391,16 @@ void CreateCDLOp(OpRcPtrVec & ops,
     CreateCDLOp(ops, cdlData, direction);
 }
 
+void CreateCDLOp(OpRcPtrVec & ops,
+                 CDLOpDataRcPtr & cdlData, 
+                 TransformDirection direction)
+{
+    if(cdlData->isNoOp()) return;
+
+    ops.push_back(std::make_shared<CDLOp>(cdlData, direction));
+}
+
+
 }
 OCIO_NAMESPACE_EXIT
 
@@ -418,7 +414,7 @@ OCIO_NAMESPACE_EXIT
 namespace OCIO = OCIO_NAMESPACE;
 
 #include <limits>
-#include "unittest.h"
+#include "UnitTest.h"
 #include "UnitTestUtils.h"
 
 OCIO_NAMESPACE_USING
@@ -435,7 +431,7 @@ void ApplyCDL(float * in, const float * ref, unsigned numPixels,
                       style, slope, offset, power, saturation, 
                       OCIO::TRANSFORM_DIR_FORWARD);
 
-    OIIO_CHECK_NO_THROW(cdlOp.finalize());
+    OCIO_CHECK_NO_THROW(cdlOp.finalize(OCIO::FINALIZATION_EXACT));
 
     cdlOp.apply(in, in, numPixels);
 
@@ -454,7 +450,7 @@ void ApplyCDL(float * in, const float * ref, unsigned numPixels,
             message << "Index: " << idx;
             message << " - Values: " << in[idx] << " and: " << ref[idx];
             message << " - Threshold: " << errorThreshold;
-            OIIO_CHECK_ASSERT_MESSAGE(0, message.str());
+            OCIO_CHECK_ASSERT_MESSAGE(0, message.str());
         }
     }
 
@@ -472,7 +468,7 @@ namespace CDL_DATA_1
     const double saturation = 1.23;
 };
 
-OIIO_ADD_TEST(CDLOps, computed_identifier)
+OCIO_ADD_TEST(CDLOps, computed_identifier)
 {
     OpRcPtrVec ops;
 
@@ -482,7 +478,7 @@ OIIO_ADD_TEST(CDLOps, computed_identifier)
                 CDL_DATA_1::slope, CDL_DATA_1::offset,
                 CDL_DATA_1::power, CDL_DATA_1::saturation, 
                 OCIO::TRANSFORM_DIR_FORWARD);
-    OIIO_REQUIRE_EQUAL(ops.size(), 1);
+    OCIO_REQUIRE_EQUAL(ops.size(), 1);
 
     CreateCDLOp(ops, 
                 "", OCIO::OpData::Descriptions(),
@@ -490,12 +486,12 @@ OIIO_ADD_TEST(CDLOps, computed_identifier)
                 CDL_DATA_1::slope, CDL_DATA_1::offset,
                 CDL_DATA_1::power, CDL_DATA_1::saturation, 
                 OCIO::TRANSFORM_DIR_FORWARD);
-    OIIO_REQUIRE_EQUAL(ops.size(), 2);
+    OCIO_REQUIRE_EQUAL(ops.size(), 2);
 
-    OIIO_CHECK_NO_THROW( ops[0]->finalize() );
-    OIIO_CHECK_NO_THROW( ops[1]->finalize() );
+    OCIO_CHECK_NO_THROW( ops[0]->finalize(OCIO::FINALIZATION_EXACT) );
+    OCIO_CHECK_NO_THROW( ops[1]->finalize(OCIO::FINALIZATION_EXACT) );
 
-    OIIO_CHECK_EQUAL( ops[0]->getCacheID(), ops[1]->getCacheID() );
+    OCIO_CHECK_EQUAL( ops[0]->getCacheID(), ops[1]->getCacheID() );
 
 
     CreateCDLOp(ops, 
@@ -504,26 +500,12 @@ OIIO_ADD_TEST(CDLOps, computed_identifier)
                 CDL_DATA_1::slope, CDL_DATA_1::offset,
                 CDL_DATA_1::power, CDL_DATA_1::saturation, 
                 OCIO::TRANSFORM_DIR_FORWARD);
-    OIIO_REQUIRE_EQUAL(ops.size(), 3);
+    OCIO_REQUIRE_EQUAL(ops.size(), 3);
 
-    OIIO_CHECK_NO_THROW( ops[2]->finalize() );
+    OCIO_CHECK_NO_THROW( ops[2]->finalize(OCIO::FINALIZATION_EXACT) );
 
-    OIIO_CHECK_ASSERT( ops[0]->getCacheID() != ops[2]->getCacheID() );
-    OIIO_CHECK_ASSERT( ops[1]->getCacheID() != ops[2]->getCacheID() );
-
-    CreateCDLOp(ops, 
-                "1", OCIO::OpData::Descriptions(),
-                OCIO::CDLOpData::CDL_V1_2_FWD, 
-                CDL_DATA_1::slope, CDL_DATA_1::offset,
-                CDL_DATA_1::power, CDL_DATA_1::saturation + 0.002f, 
-                OCIO::TRANSFORM_DIR_FORWARD);
-    OIIO_REQUIRE_EQUAL(ops.size(), 4);
-
-    OIIO_CHECK_NO_THROW( ops[3]->finalize() );
-
-    OIIO_CHECK_ASSERT( ops[0]->getCacheID() != ops[3]->getCacheID() );
-    OIIO_CHECK_ASSERT( ops[1]->getCacheID() != ops[3]->getCacheID() );
-    OIIO_CHECK_ASSERT( ops[2]->getCacheID() != ops[3]->getCacheID() );
+    OCIO_CHECK_ASSERT( ops[0]->getCacheID() != ops[2]->getCacheID() );
+    OCIO_CHECK_ASSERT( ops[1]->getCacheID() != ops[2]->getCacheID() );
 
     CreateCDLOp(ops, 
                 "1", OCIO::OpData::Descriptions(),
@@ -531,14 +513,28 @@ OIIO_ADD_TEST(CDLOps, computed_identifier)
                 CDL_DATA_1::slope, CDL_DATA_1::offset,
                 CDL_DATA_1::power, CDL_DATA_1::saturation + 0.002f, 
                 OCIO::TRANSFORM_DIR_FORWARD);
-    OIIO_REQUIRE_EQUAL(ops.size(), 5);
+    OCIO_REQUIRE_EQUAL(ops.size(), 4);
 
-    OIIO_CHECK_NO_THROW( ops[4]->finalize() );
+    OCIO_CHECK_NO_THROW( ops[3]->finalize(OCIO::FINALIZATION_EXACT) );
 
-    OIIO_CHECK_ASSERT( ops[0]->getCacheID() != ops[4]->getCacheID() );
-    OIIO_CHECK_ASSERT( ops[1]->getCacheID() != ops[4]->getCacheID() );
-    OIIO_CHECK_ASSERT( ops[2]->getCacheID() != ops[4]->getCacheID() );
-    OIIO_CHECK_ASSERT( ops[3]->getCacheID() == ops[4]->getCacheID() );
+    OCIO_CHECK_ASSERT( ops[0]->getCacheID() != ops[3]->getCacheID() );
+    OCIO_CHECK_ASSERT( ops[1]->getCacheID() != ops[3]->getCacheID() );
+    OCIO_CHECK_ASSERT( ops[2]->getCacheID() != ops[3]->getCacheID() );
+
+    CreateCDLOp(ops, 
+                "1", OCIO::OpData::Descriptions(),
+                OCIO::CDLOpData::CDL_V1_2_FWD, 
+                CDL_DATA_1::slope, CDL_DATA_1::offset,
+                CDL_DATA_1::power, CDL_DATA_1::saturation + 0.002f, 
+                OCIO::TRANSFORM_DIR_FORWARD);
+    OCIO_REQUIRE_EQUAL(ops.size(), 5);
+
+    OCIO_CHECK_NO_THROW( ops[4]->finalize(OCIO::FINALIZATION_EXACT) );
+
+    OCIO_CHECK_ASSERT( ops[0]->getCacheID() != ops[4]->getCacheID() );
+    OCIO_CHECK_ASSERT( ops[1]->getCacheID() != ops[4]->getCacheID() );
+    OCIO_CHECK_ASSERT( ops[2]->getCacheID() != ops[4]->getCacheID() );
+    OCIO_CHECK_ASSERT( ops[3]->getCacheID() == ops[4]->getCacheID() );
 
     CreateCDLOp(ops, 
                 "1", OCIO::OpData::Descriptions(),
@@ -546,15 +542,15 @@ OIIO_ADD_TEST(CDLOps, computed_identifier)
                 CDL_DATA_1::slope, CDL_DATA_1::offset,
                 CDL_DATA_1::power, CDL_DATA_1::saturation + 0.002f, 
                 OCIO::TRANSFORM_DIR_FORWARD);
-    OIIO_REQUIRE_EQUAL(ops.size(), 6);
+    OCIO_REQUIRE_EQUAL(ops.size(), 6);
 
-    OIIO_CHECK_NO_THROW( ops[5]->finalize() );
+    OCIO_CHECK_NO_THROW( ops[5]->finalize(OCIO::FINALIZATION_EXACT) );
 
-    OIIO_CHECK_ASSERT( ops[3]->getCacheID() != ops[5]->getCacheID() );
-    OIIO_CHECK_ASSERT( ops[4]->getCacheID() != ops[5]->getCacheID() );
+    OCIO_CHECK_ASSERT( ops[3]->getCacheID() != ops[5]->getCacheID() );
+    OCIO_CHECK_ASSERT( ops[4]->getCacheID() != ops[5]->getCacheID() );
 }
 
-OIIO_ADD_TEST(CDLOps, is_inverse)
+OCIO_ADD_TEST(CDLOps, is_inverse)
 {
     OpRcPtrVec ops;
 
@@ -564,7 +560,7 @@ OIIO_ADD_TEST(CDLOps, is_inverse)
                 CDL_DATA_1::slope, CDL_DATA_1::offset,
                 CDL_DATA_1::power, CDL_DATA_1::saturation, 
                 OCIO::TRANSFORM_DIR_FORWARD);
-    OIIO_REQUIRE_EQUAL(ops.size(), 1);
+    OCIO_REQUIRE_EQUAL(ops.size(), 1);
 
     CreateCDLOp(ops, 
                 "", OCIO::OpData::Descriptions(),
@@ -572,13 +568,13 @@ OIIO_ADD_TEST(CDLOps, is_inverse)
                 CDL_DATA_1::slope, CDL_DATA_1::offset,
                 CDL_DATA_1::power, CDL_DATA_1::saturation, 
                 OCIO::TRANSFORM_DIR_INVERSE);
-    OIIO_REQUIRE_EQUAL(ops.size(), 2);
+    OCIO_REQUIRE_EQUAL(ops.size(), 2);
 
     OCIO::ConstOpRcPtr op0 = ops[0];
     OCIO::ConstOpRcPtr op1 = ops[1];
 
-    OIIO_CHECK_ASSERT(ops[0]->isInverse(op1));
-    OIIO_CHECK_ASSERT(ops[1]->isInverse(op0));
+    OCIO_CHECK_ASSERT(ops[0]->isInverse(op1));
+    OCIO_CHECK_ASSERT(ops[1]->isInverse(op0));
 
     CreateCDLOp(ops, 
                 "", OCIO::OpData::Descriptions(),
@@ -586,13 +582,13 @@ OIIO_ADD_TEST(CDLOps, is_inverse)
                 CDL_DATA_1::slope, CDL_DATA_1::offset, 
                 CDL_DATA_1::power, 1.30, 
                 OCIO::TRANSFORM_DIR_INVERSE);
-    OIIO_REQUIRE_EQUAL(ops.size(), 3);
+    OCIO_REQUIRE_EQUAL(ops.size(), 3);
     OCIO::ConstOpRcPtr op2 = ops[2];
 
-    OIIO_CHECK_ASSERT(!ops[0]->isInverse(op2));
-    OIIO_CHECK_ASSERT(!ops[1]->isInverse(op2));
-    OIIO_CHECK_ASSERT(!ops[2]->isInverse(op0));
-    OIIO_CHECK_ASSERT(!ops[2]->isInverse(op1));
+    OCIO_CHECK_ASSERT(!ops[0]->isInverse(op2));
+    OCIO_CHECK_ASSERT(!ops[1]->isInverse(op2));
+    OCIO_CHECK_ASSERT(!ops[2]->isInverse(op0));
+    OCIO_CHECK_ASSERT(!ops[2]->isInverse(op1));
 
     CreateCDLOp(ops, 
                 "", OCIO::OpData::Descriptions(),
@@ -600,10 +596,10 @@ OIIO_ADD_TEST(CDLOps, is_inverse)
                 CDL_DATA_1::slope, CDL_DATA_1::offset, 
                 CDL_DATA_1::power, 1.30, 
                 OCIO::TRANSFORM_DIR_INVERSE);
-    OIIO_REQUIRE_EQUAL(ops.size(), 4);
+    OCIO_REQUIRE_EQUAL(ops.size(), 4);
     OCIO::ConstOpRcPtr op3 = ops[3];
 
-    OIIO_CHECK_ASSERT(ops[2]->isInverse(op3));
+    OCIO_CHECK_ASSERT(ops[2]->isInverse(op3));
 
     CreateCDLOp(ops, 
                 "", OCIO::OpData::Descriptions(),
@@ -611,11 +607,11 @@ OIIO_ADD_TEST(CDLOps, is_inverse)
                 CDL_DATA_1::slope, CDL_DATA_1::offset, 
                 CDL_DATA_1::power, 1.30, 
                 OCIO::TRANSFORM_DIR_FORWARD);
-    OIIO_REQUIRE_EQUAL(ops.size(), 5);
+    OCIO_REQUIRE_EQUAL(ops.size(), 5);
     OCIO::ConstOpRcPtr op4 = ops[4];
 
-    OIIO_CHECK_ASSERT(!ops[2]->isInverse(op4));
-    OIIO_CHECK_ASSERT(ops[3]->isInverse(op4));
+    OCIO_CHECK_ASSERT(!ops[2]->isInverse(op4));
+    OCIO_CHECK_ASSERT(ops[3]->isInverse(op4));
 
     CreateCDLOp(ops, 
                 "", OCIO::OpData::Descriptions(),
@@ -623,12 +619,12 @@ OIIO_ADD_TEST(CDLOps, is_inverse)
                 CDL_DATA_1::slope, CDL_DATA_1::offset, 
                 CDL_DATA_1::power, 1.30, 
                 OCIO::TRANSFORM_DIR_FORWARD);
-    OIIO_REQUIRE_EQUAL(ops.size(), 6);
+    OCIO_REQUIRE_EQUAL(ops.size(), 6);
     OCIO::ConstOpRcPtr op5 = ops[5];
 
-    OIIO_CHECK_ASSERT(!ops[2]->isInverse(op5));
-    OIIO_CHECK_ASSERT(!ops[3]->isInverse(op5));
-    OIIO_CHECK_ASSERT(!ops[4]->isInverse(op5));
+    OCIO_CHECK_ASSERT(!ops[2]->isInverse(op5));
+    OCIO_CHECK_ASSERT(!ops[3]->isInverse(op5));
+    OCIO_CHECK_ASSERT(!ops[4]->isInverse(op5));
 
     CreateCDLOp(ops, 
                 "", OCIO::OpData::Descriptions(),
@@ -636,13 +632,13 @@ OIIO_ADD_TEST(CDLOps, is_inverse)
                 CDL_DATA_1::slope, CDL_DATA_1::offset, 
                 CDL_DATA_1::power, 1.30, 
                 OCIO::TRANSFORM_DIR_INVERSE);
-    OIIO_REQUIRE_EQUAL(ops.size(), 7);
+    OCIO_REQUIRE_EQUAL(ops.size(), 7);
     OCIO::ConstOpRcPtr op6 = ops[6];
 
-    OIIO_CHECK_ASSERT(!ops[2]->isInverse(op6));
-    OIIO_CHECK_ASSERT(!ops[3]->isInverse(op6));
-    OIIO_CHECK_ASSERT(!ops[4]->isInverse(op6));
-    OIIO_CHECK_ASSERT(ops[5]->isInverse(op6));
+    OCIO_CHECK_ASSERT(!ops[2]->isInverse(op6));
+    OCIO_CHECK_ASSERT(!ops[3]->isInverse(op6));
+    OCIO_CHECK_ASSERT(!ops[4]->isInverse(op6));
+    OCIO_CHECK_ASSERT(ops[5]->isInverse(op6));
 }
 
 // The expected values below were calculated via an independent ASC CDL
@@ -652,7 +648,7 @@ OIIO_ADD_TEST(CDLOps, is_inverse)
 // of the power function.
 // TODO: The NaN and Inf handling is probably not ideal, as shown by the 
 // tests below, and could be improved.
-OIIO_ADD_TEST(CDLOps, apply_clamp_fwd)
+OCIO_ADD_TEST(CDLOps, apply_clamp_fwd)
 {
     const float qnan = std::numeric_limits<float>::quiet_NaN();
     const float inf = std::numeric_limits<float>::infinity();
@@ -691,7 +687,7 @@ OIIO_ADD_TEST(CDLOps, apply_clamp_fwd)
 #endif
 }
 
-OIIO_ADD_TEST(CDLOps, apply_clamp_rev)
+OCIO_ADD_TEST(CDLOps, apply_clamp_rev)
 {
     const float qnan = std::numeric_limits<float>::quiet_NaN();
     const float inf = std::numeric_limits<float>::infinity();
@@ -730,7 +726,7 @@ OIIO_ADD_TEST(CDLOps, apply_clamp_rev)
 #endif
 }
 
-OIIO_ADD_TEST(CDLOps, apply_noclamp_fwd)
+OCIO_ADD_TEST(CDLOps, apply_noclamp_fwd)
 {
     const float qnan = std::numeric_limits<float>::quiet_NaN();
     const float inf = std::numeric_limits<float>::infinity();
@@ -769,7 +765,7 @@ OIIO_ADD_TEST(CDLOps, apply_noclamp_fwd)
 #endif
 }
 
-OIIO_ADD_TEST(CDLOps, apply_noclamp_rev)
+OCIO_ADD_TEST(CDLOps, apply_noclamp_rev)
 {
     const float qnan = std::numeric_limits<float>::quiet_NaN();
     const float inf = std::numeric_limits<float>::infinity();
@@ -816,7 +812,7 @@ namespace CDL_DATA_2
     const double saturation = 0.87;
 };
 
-OIIO_ADD_TEST(CDLOps, apply_clamp_fwd_2)
+OCIO_ADD_TEST(CDLOps, apply_clamp_fwd_2)
 {
     const float qnan = std::numeric_limits<float>::quiet_NaN();
     const float inf = std::numeric_limits<float>::infinity();
@@ -857,7 +853,7 @@ namespace CDL_DATA_3
     const double saturation = 0.99;
 };
 
-OIIO_ADD_TEST(CDLOps, apply_clamp_fwd_3)
+OCIO_ADD_TEST(CDLOps, apply_clamp_fwd_3)
 {
     const float qnan = std::numeric_limits<float>::quiet_NaN();
     const float inf = std::numeric_limits<float>::infinity();
@@ -924,7 +920,7 @@ OIIO_ADD_TEST(CDLOps, apply_clamp_fwd_3)
 #endif
 }
 
-OIIO_ADD_TEST(CDLOps, apply_noclamp_fwd_3)
+OCIO_ADD_TEST(CDLOps, apply_noclamp_fwd_3)
 {
     const float qnan = std::numeric_limits<float>::quiet_NaN();
     const float inf = std::numeric_limits<float>::infinity();
