@@ -34,7 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "GpuShader.h"
 #include "GpuShaderUtils.h"
 #include "Logging.h"
-#include "ops/Allocation/AllocationOp.h"
+#include "ops/allocation/AllocationOp.h"
 #include "ops/Lut3D/Lut3DOp.h"
 #include "ops/NoOp/NoOps.h"
 
