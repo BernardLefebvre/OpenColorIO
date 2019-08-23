@@ -32,7 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenColorIO/OpenColorIO.h>
 
-#include "ops/Allocation/AllocationOp.h"
+#include "ops/allocation/AllocationOp.h"
 #include "OpBuilders.h"
 
 OCIO_NAMESPACE_ENTER

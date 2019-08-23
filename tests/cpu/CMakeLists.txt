@@ -107,7 +107,7 @@ set(SOURCES
 	OCIOYaml.cpp
 	Op.cpp
 	OpOptimizers.cpp
-	ops/Allocation/AllocationOp.cpp
+	ops/allocation/AllocationOp.cpp
 	ops/CDL/CDLOpCPU.cpp
 	ops/CDL/CDLOpData.cpp
 	ops/CDL/CDLOps.cpp
