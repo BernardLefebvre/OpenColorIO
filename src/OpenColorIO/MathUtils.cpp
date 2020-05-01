@@ -459,6 +459,7 @@ unsigned abs_dif(unsigned a, unsigned b)
 bool FloatsDiffer(const float expected, const float actual,
                   const int tolerance, const bool compressDenorms)
 {
+	const unsigned abs_tolerance = (unsigned)abs(tolerance);
     const unsigned expectedBits = FloatAsInt(expected);
     const unsigned actualBits = FloatAsInt(actual);
 
@@ -517,7 +518,7 @@ bool FloatsDiffer(const float expected, const float actual,
         actualBitsComp = FloatForCompare(actualBits);
     }
 
-    return abs_dif(expectedBitsComp, actualBitsComp) > tolerance;
+    return abs_dif(expectedBitsComp, actualBitsComp) > abs_tolerance;
 }
 
 inline int HalfForCompare(const half h)
