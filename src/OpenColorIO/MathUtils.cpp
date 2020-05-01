@@ -450,6 +450,12 @@ inline void ExtractFloatComponents(const unsigned floatBits, unsigned& sign,
     sign = signExp >> 8;
 }
 
+unsigned abs_dif(unsigned a, unsigned b)
+{
+	if (a > b ) return a - b;
+	return b - a;
+}
+
 bool FloatsDiffer(const float expected, const float actual,
                   const int tolerance, const bool compressDenorms)
 {
