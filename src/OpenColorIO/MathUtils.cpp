@@ -517,7 +517,7 @@ bool FloatsDiffer(const float expected, const float actual,
         actualBitsComp = FloatForCompare(actualBits);
     }
 
-    return abs(expectedBitsComp - actualBitsComp) > tolerance;
+    return abs_dif(expectedBitsComp, actualBitsComp) > tolerance;
 }
 
 inline int HalfForCompare(const half h)
